@@ -96,9 +96,8 @@ for i, stream in enumerate(STREAMS):
             title=f"{STREAM_ICONS.get(stream, '📊')} {stream.title()}",
             max_val=100,
             thresholds={
-                "green": 95,
-                "yellow": 85,
-                "red": 0,
+                "warning": 95,
+                "critical": 85,
             },
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -215,7 +214,7 @@ with env_left:
         value=compliance_pct,
         title="Environmental Compliance %",
         max_val=100,
-        thresholds={"green": 95, "yellow": 85, "red": 0},
+        thresholds={"warning": 95, "critical": 85},
     )
     st.plotly_chart(fig, use_container_width=True)
 
