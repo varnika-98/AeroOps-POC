@@ -37,5 +37,8 @@ data/logs/
 .DS_Store
 Thumbs.db
 
+# Docs (internal reference only)
+docs/
+
 # Streamlit
 .streamlit/secrets.toml
