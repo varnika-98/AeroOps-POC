@@ -57,9 +57,9 @@ def load_cargo():
 # Page setup
 # ---------------------------------------------------------------------------
 
-st.set_page_config(page_title="Flight & Passenger Analytics", page_icon="✈️", layout="wide")
+st.set_page_config(page_title="Passenger Analytics", page_icon="✈️", layout="wide")
 apply_theme(st)
-st.markdown(page_header("Flight & Passenger Analytics", "✈️"), unsafe_allow_html=True)
+st.markdown(page_header("Passenger Analytics", "✈️"), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Top metrics row
