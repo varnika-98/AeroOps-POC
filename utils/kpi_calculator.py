@@ -52,19 +52,25 @@ def get_data_quality_scores() -> dict:
         return _NO_DATA.copy()
 
     result = {}
-    if "stream" in df.columns and "quality_score" in df.columns:
+    # Gold layer stores the column as "validation_rate_pct"
+    score_col = (
+        "quality_score" if "quality_score" in df.columns
+        else "validation_rate_pct" if "validation_rate_pct" in df.columns
+        else None
+    )
+    if "stream" in df.columns and score_col:
         for stream, grp in df.groupby("stream"):
             result[stream] = {
-                "quality_score": round(grp["quality_score"].mean(), 2),
-                "min_score": round(grp["quality_score"].min(), 2),
-                "max_score": round(grp["quality_score"].max(), 2),
+                "quality_score": round(grp[score_col].mean(), 2),
+                "min_score": round(grp[score_col].min(), 2),
+                "max_score": round(grp[score_col].max(), 2),
                 "records": len(grp),
             }
-    elif "quality_score" in df.columns:
+    elif score_col and score_col in df.columns:
         result["overall"] = {
-            "quality_score": round(df["quality_score"].mean(), 2),
-            "min_score": round(df["quality_score"].min(), 2),
-            "max_score": round(df["quality_score"].max(), 2),
+            "quality_score": round(df[score_col].mean(), 2),
+            "min_score": round(df[score_col].min(), 2),
+            "max_score": round(df[score_col].max(), 2),
             "records": len(df),
         }
     else:
@@ -80,11 +86,15 @@ def get_flight_kpis() -> dict:
         return _NO_DATA.copy()
 
     result = {}
-    if "on_time_pct" in df.columns:
+    if "otp_pct" in df.columns:
+        result["otp_pct"] = round(df["otp_pct"].mean(), 2)
+    elif "on_time_pct" in df.columns:
         result["otp_pct"] = round(df["on_time_pct"].mean(), 2)
     if "avg_delay_min" in df.columns:
         result["avg_delay_min"] = round(df["avg_delay_min"].mean(), 2)
-    if "gate_utilization" in df.columns:
+    if "gates_used" in df.columns:
+        result["gate_utilization_pct"] = round(df["gates_used"].mean(), 2)
+    elif "gate_utilization" in df.columns:
         result["gate_utilization_pct"] = round(df["gate_utilization"].mean(), 2)
     if "total_flights" in df.columns:
         result["total_flights"] = int(df["total_flights"].sum())
@@ -99,12 +109,14 @@ def get_passenger_kpis() -> dict:
         return _NO_DATA.copy()
 
     result = {}
-    if "throughput_per_hour" in df.columns:
+    if "avg_throughput" in df.columns:
+        result["throughput_per_hour"] = round(df["avg_throughput"].mean(), 2)
+    elif "throughput_per_hour" in df.columns:
         result["throughput_per_hour"] = round(df["throughput_per_hour"].mean(), 2)
     if "avg_wait_min" in df.columns:
         result["avg_wait_min"] = round(df["avg_wait_min"].mean(), 2)
-    if "checkpoint_efficiency" in df.columns:
-        result["checkpoint_efficiency_pct"] = round(df["checkpoint_efficiency"].mean(), 2)
+    if "checkpoint" in df.columns:
+        result["checkpoint_count"] = df["checkpoint"].nunique()
     if "total_passengers" in df.columns:
         result["total_passengers"] = int(df["total_passengers"].sum())
 
@@ -120,9 +132,17 @@ def get_safety_kpis() -> dict:
     result = {}
     if "avg_response_sec" in df.columns:
         result["avg_response_sec"] = round(df["avg_response_sec"].mean(), 2)
-    if "total_alerts" in df.columns:
+    if "alert_count" in df.columns:
+        result["total_alerts"] = int(df["alert_count"].sum())
+    elif "total_alerts" in df.columns:
         result["total_alerts"] = int(df["total_alerts"].sum())
-    if "resolved_alerts" in df.columns:
+    if "auto_cleared" in df.columns and "escalated" in df.columns:
+        resolved = int(df["auto_cleared"].sum())
+        result["resolved_alerts"] = resolved
+        total_a = result.get("total_alerts", 0)
+        if total_a > 0:
+            result["resolution_rate_pct"] = round(resolved / total_a * 100, 2)
+    elif "resolved_alerts" in df.columns:
         result["resolved_alerts"] = int(df["resolved_alerts"].sum())
         if result.get("total_alerts", 0) > 0:
             result["resolution_rate_pct"] = round(
