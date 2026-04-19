@@ -90,7 +90,8 @@ quality_scores = get_data_quality_scores()  # dict: stream -> score
 cols = st.columns(len(STREAMS))
 for i, stream in enumerate(STREAMS):
     with cols[i]:
-        score = quality_scores.get(stream, 0) if isinstance(quality_scores, dict) else 0
+        score_data = quality_scores.get(stream, 0) if isinstance(quality_scores, dict) else 0
+        score = score_data.get("quality_score", 0) if isinstance(score_data, dict) else score_data
         fig = gauge_chart(
             value=score,
             title=f"{STREAM_ICONS.get(stream, '📊')} {stream.title()}",
