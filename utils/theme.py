@@ -52,6 +52,16 @@ def apply_theme(st) -> None:
             [data-testid="stSidebarNav"] {{
                 background-color: {COLORS["navy"]};
             }}
+            /* Logo area at top of sidebar */
+            [data-testid="stSidebarHeader"] {{
+                background-color: {COLORS["navy"]};
+                padding: 1rem 1rem 0.5rem 1rem;
+            }}
+            [data-testid="stSidebarHeader"] img {{
+                max-height: 80px !important;
+                height: 80px !important;
+                width: auto !important;
+            }}
             [data-testid="stSidebarNav"] a,
             [data-testid="stSidebarNav"] a span,
             [data-testid="stSidebarNavLink"],

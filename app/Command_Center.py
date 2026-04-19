@@ -135,11 +135,9 @@ _C_DARK_GRAY = COLORS["dark_gray"]
 _C_WARN_YELLOW = COLORS["warning_yellow"]
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
-st.logo(str(_PROJECT_ROOT / "resources" / "logo.svg"))
+st.logo(str(_PROJECT_ROOT / "resources" / "logo.svg"), size="large")
 
 with st.sidebar:
-    st.divider()
-
     # -- Failure Scenarios --
     st.markdown(
         f"<h4 style='color:{_C_WARN_YELLOW}'>⚠️ Failure Scenarios</h4>",
@@ -186,8 +184,6 @@ with st.sidebar:
                     inject_sensor_outage,
                     inject_traffic_spike,
                 )
-                from pipeline.bronze_ingestion import ingest_to_bronze
-
                 multiplier = 1.0
                 if st.session_state.get("failure_traffic_spike"):
                     multiplier = inject_traffic_spike()
@@ -200,24 +196,12 @@ with st.sidebar:
                     events = inject_sensor_outage(events)
 
                 write_events_to_json(events)
-                for stream_name, stream_events in events.items():
-                    ingest_to_bronze(stream_name, stream_events)
                 result = run_pipeline()
                 st.success("Data generated & pipeline executed ✅")
                 st.cache_data.clear()
             except Exception as exc:
                 st.error(f"Data generation failed: {exc}")
 
-    st.divider()
-
-    # -- Auto Refresh --
-    st.markdown(
-        f"<h4 style='color:{_C_SKY_BLUE}'>🔄 Auto Refresh</h4>",
-        unsafe_allow_html=True,
-    )
-    refresh_interval = st.slider(
-        "Refresh interval (sec)", min_value=10, max_value=300, value=60, step=10
-    )
 
 
 # ── Helper: determine status from quality score ──────────────────────────
@@ -447,7 +431,6 @@ with right_col:
 st.markdown("---")
 st.markdown(
     f"<p style='text-align:center;color:{_C_DARK_GRAY};font-size:0.8rem;'>"
-    f"AeroOps AI — Smart Airport IoT DataOps Platform &nbsp;|&nbsp; "
-    f"Auto-refresh every {refresh_interval}s</p>",
+    f"AeroOps AI — Smart Airport IoT DataOps Platform</p>",
     unsafe_allow_html=True,
 )
