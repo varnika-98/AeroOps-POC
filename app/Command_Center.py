@@ -135,15 +135,9 @@ _C_DARK_GRAY = COLORS["dark_gray"]
 _C_WARN_YELLOW = COLORS["warning_yellow"]
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
+st.logo(str(_PROJECT_ROOT / "resources" / "logo.svg"))
+
 with st.sidebar:
-    st.markdown(
-        f"<h1 style='color:{_C_WHITE};margin-bottom:0'>✈️ AeroOps AI</h1>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<p style='color:{_C_LIGHT_GRAY};margin-top:0'>Smart Airport IoT DataOps</p>",
-        unsafe_allow_html=True,
-    )
     st.divider()
 
     # -- Failure Scenarios --
