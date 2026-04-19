@@ -200,7 +200,8 @@ with st.sidebar:
                     events = inject_sensor_outage(events)
 
                 write_events_to_json(events)
-                ingest_to_bronze()
+                for stream_name, stream_events in events.items():
+                    ingest_to_bronze(stream_name, stream_events)
                 result = run_pipeline()
                 st.success("Data generated & pipeline executed ✅")
                 st.cache_data.clear()
