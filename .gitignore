@@ -28,6 +28,7 @@ data/logs/
 # IDE
 .vscode/
 .idea/
+.vs/
 *.swp
 *.swo
 *~
