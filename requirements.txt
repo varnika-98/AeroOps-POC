@@ -1,0 +1,21 @@
+# AeroOps AI — Smart Airport IoT DataOps Dashboard
+# Python 3.10+
+
+# Dashboard
+streamlit>=1.32.0
+plotly>=5.18.0
+altair>=5.2.0
+
+# Data Processing
+pandas>=2.1.0
+duckdb>=0.10.0
+pyarrow>=15.0.0
+
+# AI Integration
+anthropic>=0.25.0
+
+# Data Simulation
+faker>=24.0.0
+
+# Utilities
+python-dotenv>=1.0.0
