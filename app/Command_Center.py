@@ -235,7 +235,7 @@ def _quality_status(score: float) -> str:
 
 
 # ── Main Content ───────────────────────────────────────────────────────────
-st.markdown(page_header("Command Center", "🏠"), unsafe_allow_html=True)
+st.markdown(page_header("Command Center", ""), unsafe_allow_html=True)
 
 # Load all KPI data
 flight_kpis = load_flight_kpis()

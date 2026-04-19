@@ -48,6 +48,32 @@ def apply_theme(st) -> None:
             [data-testid="stSidebar"] .stMarkdown {{
                 color: {COLORS["white"]};
             }}
+            /* Sidebar nav page links */
+            [data-testid="stSidebarNav"] {{
+                background-color: {COLORS["navy"]};
+            }}
+            [data-testid="stSidebarNav"] a,
+            [data-testid="stSidebarNav"] a span,
+            [data-testid="stSidebarNavLink"],
+            [data-testid="stSidebarNavLink"] span {{
+                color: {COLORS["white"]} !important;
+            }}
+            [data-testid="stSidebarNavLink"]:hover {{
+                background-color: rgba(74, 144, 217, 0.25) !important;
+            }}
+            [data-testid="stSidebarNavLink"][aria-selected="true"] {{
+                background-color: rgba(74, 144, 217, 0.4) !important;
+            }}
+            /* All text elements inside sidebar */
+            [data-testid="stSidebar"] p,
+            [data-testid="stSidebar"] label,
+            [data-testid="stSidebar"] span,
+            [data-testid="stSidebar"] div {{
+                color: {COLORS["white"]};
+            }}
+            [data-testid="stSidebar"] .stCheckbox span {{
+                color: {COLORS["white"]} !important;
+            }}
             /* Headers */
             h1, h2, h3 {{
                 color: {COLORS["navy"]};
