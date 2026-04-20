@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils.theme import COLORS, STATUS_COLORS, STREAM_ICONS, apply_theme, metric_card, status_indicator, page_header, page_loader
+from utils.theme import COLORS, STATUS_COLORS, STREAM_ICONS, SVG_ICONS, apply_theme, metric_card, status_indicator, page_header, page_loader, section_header
 from utils.charts import gauge_chart, bar_chart
 from utils.kpi_calculator import get_data_quality_scores, get_environmental_compliance, get_overall_system_health
 
@@ -81,10 +81,10 @@ def _freshness_status(minutes: float) -> tuple[str, str]:
 # Page content
 # =========================================================================
 
-page_header("KPI Metrics & Data Quality", "📈")
+st.markdown(page_header("KPI Metrics & Data Quality", SVG_ICONS["chart_up"]), unsafe_allow_html=True)
 
 # ---------- 1. Data Quality Gauges ----------
-st.subheader("Data Quality Scores by Stream")
+st.markdown(section_header("Data Quality Scores by Stream", "gauge"), unsafe_allow_html=True)
 
 quality_scores = get_data_quality_scores()  # dict: stream -> score
 
@@ -95,7 +95,7 @@ for i, stream in enumerate(STREAMS):
         score = score_data.get("quality_score", 0) if isinstance(score_data, dict) else score_data
         fig = gauge_chart(
             value=score,
-            title=f"{STREAM_ICONS.get(stream, '📊')} {stream.title()}",
+            title=f"{stream.title()}",
             max_val=100,
             thresholds={
                 "warning": 95,
@@ -105,7 +105,7 @@ for i, stream in enumerate(STREAMS):
         st.plotly_chart(fig, use_container_width=True)
 
 # ---------- 2. Schema Validation Rate ----------
-st.subheader("Schema Validation Rate")
+st.markdown(section_header("Schema Validation Rate", "validate"), unsafe_allow_html=True)
 
 quality_df = load_parquet(str(GOLD_DIR / "quality_kpis.parquet"))
 if quality_df is not None and not quality_df.empty:
@@ -132,7 +132,7 @@ else:
     st.info("No quality_kpis.parquet found — run the pipeline to generate KPIs.")
 
 # ---------- 3. Quarantine: Trend & Breakdown ----------
-st.subheader("Quarantine Analysis")
+st.markdown(section_header("Quarantine Analysis", "quarantine"), unsafe_allow_html=True)
 
 left_col, right_col = st.columns(2)
 
@@ -179,7 +179,7 @@ with right_col:
         st.info("No quarantine reason data available.")
 
 # ---------- 4. Gold Table Freshness ----------
-st.subheader("Gold Table Freshness")
+st.markdown(section_header("Gold Table Freshness", "freshness"), unsafe_allow_html=True)
 
 freshness_rows: list[dict] = []
 if GOLD_DIR.exists():
@@ -203,7 +203,7 @@ else:
     st.info("No gold parquet files found.")
 
 # ---------- 5. Environmental Compliance ----------
-st.subheader("Environmental Compliance")
+st.markdown(section_header("Environmental Compliance", "leaf"), unsafe_allow_html=True)
 
 env_data = get_environmental_compliance()
 env_df = load_parquet(str(SILVER_DIR / "environmental.parquet"))
@@ -237,7 +237,7 @@ with env_right:
         st.info("No environmental data available.")
 
 # ---------- 6. KPI Summary Table ----------
-st.subheader("KPI Summary Table")
+st.markdown(section_header("KPI Summary Table", "table"), unsafe_allow_html=True)
 
 system = get_overall_system_health()
 

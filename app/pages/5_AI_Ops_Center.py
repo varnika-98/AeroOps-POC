@@ -1,12 +1,18 @@
 """AI Ops Center — AeroOps AI real-time diagnostics and chat interface."""
 
 import json
+import sys
+from pathlib import Path
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
 import streamlit as st
 
 from ai.claude_client import ClaudeClient
 from ai.context_builder import build_ai_context, format_context_for_prompt
-from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header, page_loader
+from utils.theme import COLORS, STREAM_ICONS, SVG_ICONS, apply_theme, page_header, page_loader, section_header, inline_svg, stream_svg, status_svg
 
 # ---------------------------------------------------------------------------
 # Page config & theme
@@ -14,7 +20,7 @@ from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header, page_loa
 st.set_page_config(page_title="AI Ops Center | AeroOps AI", page_icon="🤖", layout="wide")
 apply_theme(st)
 st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
-st.markdown(page_header("AI Ops Center", "🤖"), unsafe_allow_html=True)
+st.markdown(page_header("AI Ops Center", SVG_ICONS["robot"]), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Session-state initialisation
@@ -31,7 +37,7 @@ if "diagnosis_result" not in st.session_state:
 # ---------------------------------------------------------------------------
 
 def _has_api_key() -> bool:
-    """Return True when the ClaudeClient can reach the API."""
+    """Return True when any LLM backend (Ollama or Claude) is available."""
     try:
         client = ClaudeClient()
         return client._has_client()
@@ -72,17 +78,17 @@ def _determine_severity(context: dict) -> str:
 _SEVERITY_CONFIG = {
     "healthy": {
         "color": COLORS["success_green"],
-        "icon": "✅",
+        "svg": status_svg("healthy"),
         "label": "All systems operational",
     },
     "warning": {
         "color": COLORS["warning_yellow"],
-        "icon": "⚠️",
+        "svg": status_svg("warning"),
         "label": "Warnings detected",
     },
     "critical": {
         "color": COLORS["danger_red"],
-        "icon": "🚨",
+        "svg": status_svg("critical"),
         "label": "Critical issues detected",
     },
 }
@@ -114,24 +120,27 @@ st.markdown(
         font-weight: 600;
         margin-bottom: 1rem;
     ">
-        {cfg['icon']}  {cfg['label']}
+        {cfg['svg']}  {cfg['label']}
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# API-key guard
+# API/LLM guard
 api_available = _has_api_key()
-if not api_available:
-    st.warning("⚠️ Set **ANTHROPIC_API_KEY** in `.env` to enable AI features.")
+if api_available:
+    _client_info = ClaudeClient()
+    st.caption(f"🤖 AI Backend: **{_client_info._get_backend_label()}**")
+else:
+    st.warning("⚠️ No LLM backend available. Start **Ollama** locally or set **ANTHROPIC_API_KEY** in `.env`.")
 
 # ---------------------------------------------------------------------------
 # 3. System Status Summary — Generate Diagnosis
 # ---------------------------------------------------------------------------
-st.subheader("🩺 System Diagnosis")
+st.markdown(section_header("System Diagnosis", "stethoscope"), unsafe_allow_html=True)
 
 if st.button("Generate System Diagnosis", disabled=not api_available):
-    with st.spinner("Analyzing system state with Claude…"):
+    with st.spinner("Analyzing system state…"):
         try:
             client = ClaudeClient()
             result = client.diagnose(context)
@@ -156,9 +165,9 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 4. Incident Analysis — Four Expandable Sections
 # ---------------------------------------------------------------------------
-st.subheader("🔍 Incident Analysis")
+st.markdown(section_header("Incident Analysis", "search"), unsafe_allow_html=True)
 
-with st.expander("💡 What Changed?", expanded=False):
+with st.expander("What Changed?", expanded=False):
     anomalies = context.get("anomalies", {}) if context else {}
     if anomalies.get("status") == "no_data":
         st.info("No anomaly data available.")
@@ -167,15 +176,20 @@ with st.expander("💡 What Changed?", expanded=False):
     else:
         st.warning(f"**{anomalies['count']}** anomalies detected")
         for f in anomalies.get("recent_failures", []):
-            icon = STREAM_ICONS.get(f.get("stream", ""), "🔸")
+            icon = stream_svg(f.get("stream", ""), 16)
+            quality = f.get("quality_score", "N/A")
+            failed = f.get("failed_records", 0)
+            total = f.get("total_records", 0)
+            stage = f.get("stage", "unknown")
+            ts = str(f.get("timestamp", ""))[:19]
             st.markdown(
-                f"- {icon} **{f.get('stream', 'unknown')}** — "
-                f"`{f.get('status', '')}` — {f.get('error', 'N/A')}  "
-                f"<small>({f.get('timestamp', '')})</small>",
+                f"- {icon} **{f.get('stream', 'unknown')}** / {stage} — "
+                f"quality: `{quality}`, failed: `{failed}/{total}`  "
+                f"<small>({ts})</small>",
                 unsafe_allow_html=True,
             )
 
-with st.expander("🔴 What Broke?", expanded=False):
+with st.expander("What Broke?", expanded=False):
     quality = context.get("quality_issues", {}) if context else {}
     pipeline = context.get("pipeline_health", {}) if context else {}
 
@@ -193,14 +207,15 @@ with st.expander("🔴 What Broke?", expanded=False):
         # Quality / quarantine issues
         for stream, info in quality.items():
             if isinstance(info, dict):
-                icon = STREAM_ICONS.get(stream, "📋")
+                icon = stream_svg(stream, 16)
                 st.markdown(
-                    f"- {icon} **{stream}**: {info.get('quarantined_records', 0)} quarantined records"
+                    f"- {icon} **{stream}**: {info.get('quarantined_records', 0)} quarantined records",
+                    unsafe_allow_html=True,
                 )
                 for reason, count in info.get("top_failure_reasons", {}).items():
                     st.markdown(f"  - _{reason}_: **{count}**")
 
-with st.expander("📊 What's Impacted?", expanded=False):
+with st.expander("What's Impacted?", expanded=False):
     impact = context.get("lineage_impact", {}) if context else {}
     kpis = context.get("kpi_summary", {}) if context else {}
 
@@ -226,15 +241,16 @@ with st.expander("📊 What's Impacted?", expanded=False):
         }
         if warned:
             st.markdown("**KPIs breaching thresholds:**")
+            _w_svg = status_svg("warning")
             for name, info in warned.items():
                 st.markdown(
-                    f"- ⚠️ **{name}**: {info.get('value')} {info.get('unit', '')} "
-                    f"(target: {info.get('target')} {info.get('unit', '')})"
+                    f"- {_w_svg} **{name}**: {info.get('value')} {info.get('unit', '')} "
+                    f"(target: {info.get('target')} {info.get('unit', '')})",
+                    unsafe_allow_html=True,
                 )
-
-with st.expander("✅ Recommended Actions", expanded=False):
+with st.expander("Recommended Actions", expanded=False):
     if not api_available:
-        st.info("Enable the Claude API to get AI-powered recommendations.")
+        st.info("Enable an LLM backend (Ollama or Claude) to get AI-powered recommendations.")
     elif st.button("Get Recommendations", key="btn_recommend"):
         with st.spinner("Generating recommendations…"):
             try:
@@ -249,7 +265,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 5. Chat Interface
 # ---------------------------------------------------------------------------
-st.subheader("💬 Ask the AI Ops Assistant")
+st.markdown(section_header("Ask the AI Ops Assistant", "chat"), unsafe_allow_html=True)
 
 # Starter question buttons
 starter_cols = st.columns(3)
@@ -280,8 +296,8 @@ if (
 ):
     if not api_available:
         assistant_reply = (
-            "⚠️ Claude API is not configured. Set **ANTHROPIC_API_KEY** in `.env` "
-            "to enable AI-powered responses."
+            "⚠️ No LLM backend available. Start **Ollama** locally or set "
+            "**ANTHROPIC_API_KEY** in `.env` to enable AI-powered responses."
         )
     else:
         with st.chat_message("assistant"):
@@ -304,7 +320,7 @@ st.divider()
 # ---------------------------------------------------------------------------
 # 6. Grounding Context Panel
 # ---------------------------------------------------------------------------
-with st.expander("📄 Show Context Sent to AI", expanded=False):
+with st.expander("Show Context Sent to AI", expanded=False):
     if context:
         tab_text, tab_json = st.tabs(["Formatted Text", "Raw JSON"])
         with tab_text:

@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header, page_loader
+from utils.theme import COLORS, STREAM_ICONS, SVG_ICONS, apply_theme, page_header, page_loader, section_header, inline_svg, stream_svg, status_svg
 from utils.charts import sankey_chart
 from utils.lineage import LINEAGE_MODEL, get_lineage_for_stream, get_impact_analysis, get_reverse_lineage, get_sankey_data
 from pipeline.quality_rules import QUALITY_RULES
@@ -40,13 +40,13 @@ DATA_CLASSIFICATION = {
 }
 
 TAG_COLORS = {
-    "Operational": "#3498db",
-    "PII": "#e74c3c",
-    "PII (passenger_count)": "#e74c3c",
-    "Commercial": "#2ecc71",
-    "Regulatory": "#9b59b6",
-    "Safety": "#f39c12",
-    "Security": "#e67e22",
+    "Operational": COLORS["sky_blue"],
+    "PII": COLORS["danger_red"],
+    "PII (passenger_count)": COLORS["danger_red"],
+    "Commercial": COLORS["success_green"],
+    "Regulatory": COLORS["navy"],
+    "Safety": COLORS["safety_orange"],
+    "Security": COLORS["warning_yellow"],
 }
 
 # ---------------------------------------------------------------------------
@@ -75,10 +75,10 @@ def _badge(text: str, color: str) -> str:
 # Page content
 # =========================================================================
 
-page_header("Data Lineage & Governance", "🔗")
+st.markdown(page_header("Data Lineage & Governance", SVG_ICONS["link"]), unsafe_allow_html=True)
 
 # ---------- 1. Lineage Flow Diagram (Sankey) ----------
-st.subheader("Data Lineage Flow — Bronze → Silver → Gold")
+st.markdown(section_header("Data Lineage Flow — Bronze → Silver → Gold", "sankey"), unsafe_allow_html=True)
 
 sankey_data = get_sankey_data()
 if sankey_data and sankey_data.get("labels"):
@@ -94,7 +94,7 @@ else:
     st.info("Sankey data unavailable — ensure data files exist.")
 
 # ---------- 2. Impact Analysis ----------
-st.subheader("Impact Analysis")
+st.markdown(section_header("Impact Analysis", "impact"), unsafe_allow_html=True)
 
 selected_stream = st.selectbox(
     "Select a stream to analyse impact",
@@ -106,42 +106,42 @@ selected_stream = st.selectbox(
 impact = get_impact_analysis(selected_stream)
 if impact:
     severity = impact.get("severity", "unknown")
-    sev_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(severity, "⚪")
-    st.markdown(f"**Severity if `{selected_stream}` fails:** {sev_color} {severity.upper()}")
+    sev_svg = status_svg(severity)
+    st.markdown(f"**Severity if `{selected_stream}` fails:** {sev_svg} {severity.upper()}", unsafe_allow_html=True)
 
     st.markdown("**Affected Gold Tables:**")
     for t in impact.get("affected_gold_tables", []):
-        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;📦 `{t}`")
+        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{inline_svg('cargo', 16)} `{t}`", unsafe_allow_html=True)
 
     st.markdown("**Affected KPIs:**")
     for k in impact.get("affected_kpis", []):
-        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;📈 {k}")
+        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{inline_svg('chart_up', 16)} {k}", unsafe_allow_html=True)
 
     shared = impact.get("shared_gold_with", [])
     if shared:
         st.markdown("**Shares Gold tables with streams:**")
         for s in shared:
-            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;🔗 {s}")
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{inline_svg('link', 16)} {s}", unsafe_allow_html=True)
 
     # Visual tree
     with st.expander("Lineage tree", expanded=False):
         lineage = get_lineage_for_stream(selected_stream)
         if lineage:
-            st.markdown(f"```\n{STREAM_ICONS.get(selected_stream, '')} {selected_stream}")
-            st.markdown(f"  ├── Bronze: {lineage.get('bronze', 'N/A')}")
-            st.markdown(f"  ├── Silver: {lineage.get('silver', 'N/A')}")
+            s_svg = stream_svg(selected_stream, 16)
+            st.markdown(f"{s_svg} **{selected_stream}**", unsafe_allow_html=True)
+            st.markdown(f"&nbsp;&nbsp;├── Bronze: `{lineage.get('bronze', 'N/A')}`")
+            st.markdown(f"&nbsp;&nbsp;├── Silver: `{lineage.get('silver', 'N/A')}`")
             gold = lineage.get("gold", [])
             gold_list = gold if isinstance(gold, list) else [gold]
             for g in gold_list:
-                st.markdown(f"  ├── Gold: {g}")
+                st.markdown(f"&nbsp;&nbsp;├── Gold: `{g}`")
             for k in lineage.get("kpis", []):
-                st.markdown(f"  └── KPI: {k}")
-            st.markdown("```")
+                st.markdown(f"&nbsp;&nbsp;└── KPI: `{k}`")
 else:
     st.warning("No impact data for this stream.")
 
 # ---------- 3. Quality Rules Table ----------
-st.subheader("Quality Rules Catalogue")
+st.markdown(section_header("Quality Rules Catalogue", "rules"), unsafe_allow_html=True)
 
 rules_rows: list[dict] = []
 quarantine_failed_rules: set[str] = set()
@@ -192,7 +192,7 @@ else:
     st.info("No quality rules defined.")
 
 # ---------- 4. Quarantine Inspector ----------
-st.subheader("Quarantine Inspector")
+st.markdown(section_header("Quarantine Inspector", "quarantine"), unsafe_allow_html=True)
 
 inspect_stream = st.selectbox(
     "Select stream to inspect quarantine",
@@ -225,7 +225,7 @@ else:
     st.success(f"No quarantine records for **{inspect_stream}** — all records passed! ✅")
 
 # ---------- 5. Reverse Lineage ----------
-st.subheader("Reverse Lineage — Trace KPI to Source")
+st.markdown(section_header("Reverse Lineage — Trace KPI to Source", "reverse"), unsafe_allow_html=True)
 
 # Collect all KPI names from the lineage model
 all_kpis: list[str] = []
@@ -244,12 +244,13 @@ if all_kpis:
     if reverse:
         for entry in reverse:
             stream_name = entry.get("stream", "?")
-            icon = STREAM_ICONS.get(stream_name, "📊")
+            icon = stream_svg(stream_name, 16)
             st.markdown(
                 f"**{selected_kpi}** &larr; Gold `{entry.get('gold', '?')}` "
                 f"&larr; Silver `{entry.get('silver', '?')}` "
                 f"&larr; Bronze `{entry.get('bronze', '?')}` "
-                f"({icon} {stream_name})"
+                f"({icon} {stream_name})",
+                unsafe_allow_html=True,
             )
     else:
         st.info("No lineage trace found for this KPI.")
@@ -257,13 +258,14 @@ else:
     st.info("No KPIs found in the lineage model.")
 
 # ---------- 6. Data Classification Tags ----------
-st.subheader("Data Classification Tags")
+st.markdown(section_header("Data Classification Tags", "tags"), unsafe_allow_html=True)
 
 classification_rows: list[dict] = []
 for stream, tags in DATA_CLASSIFICATION.items():
     badges_html = " ".join(_badge(tag, TAG_COLORS.get(tag, "#888")) for tag in tags)
+    s_svg = stream_svg(stream, 18)
     classification_rows.append({
-        "Stream": f"{STREAM_ICONS.get(stream, '📊')} {stream.title()}",
+        "Stream": f"{s_svg} {stream.title()}",
         "Classifications": badges_html,
     })
 

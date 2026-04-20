@@ -40,9 +40,10 @@ def _get_pipeline_health() -> dict:
 
     summary = {}
     try:
-        if "stream" in df.columns and "status" in df.columns:
+        # Actual columns: run_timestamp, stage, stream, total_records, passed, failed, quality_score, duration_sec
+        if "stream" in df.columns and "quality_score" in df.columns:
             total = len(df)
-            success = (df["status"] == "success").sum() if total > 0 else 0
+            success = (df["quality_score"] >= 1.0).sum() if total > 0 else 0
             summary["total_runs"] = int(total)
             summary["successful_runs"] = int(success)
             summary["success_rate"] = round(success / total * 100, 2) if total > 0 else 0
@@ -54,7 +55,7 @@ def _get_pipeline_health() -> dict:
             per_stream = {}
             for stream, grp in df.groupby("stream"):
                 s_total = len(grp)
-                s_success = (grp["status"] == "success").sum()
+                s_success = (grp["quality_score"] >= 1.0).sum()
                 per_stream[stream] = {
                     "runs": int(s_total),
                     "success_rate": round(s_success / s_total * 100, 2) if s_total > 0 else 0,
@@ -71,37 +72,43 @@ def _get_kpi_summary() -> dict:
     """Current KPI values vs thresholds."""
     kpis = {}
 
-    # Flight KPIs
+    # Flight KPIs (columns: hour, total_flights, on_time, otp_pct, avg_delay_min, max_delay_min, gates_used)
     df = _safe_read_parquet("data/gold/flight_kpis.parquet")
     if df is not None and not df.empty:
-        if "on_time_pct" in df.columns:
-            kpis["flight_otp"] = round(df["on_time_pct"].mean(), 2)
+        if "otp_pct" in df.columns:
+            kpis["flight_otp"] = round(df["otp_pct"].mean(), 2)
         if "avg_delay_min" in df.columns:
             kpis["avg_flight_delay_min"] = round(df["avg_delay_min"].mean(), 2)
-        if "gate_utilization" in df.columns:
-            kpis["gate_utilization"] = round(df["gate_utilization"].mean(), 2)
 
-    # Passenger KPIs
+    # Passenger KPIs (columns: checkpoint, avg_wait_min, max_wait_min, avg_throughput, total_passengers)
     df = _safe_read_parquet("data/gold/passenger_kpis.parquet")
     if df is not None and not df.empty:
-        if "throughput_per_hour" in df.columns:
-            kpis["passenger_throughput"] = round(df["throughput_per_hour"].mean(), 2)
+        if "avg_throughput" in df.columns:
+            kpis["passenger_throughput"] = round(df["avg_throughput"].mean(), 2)
         if "avg_wait_min" in df.columns:
             kpis["avg_security_wait"] = round(df["avg_wait_min"].mean(), 2)
 
-    # Quality KPIs
+    # Quality KPIs (columns: stream, total_records, valid_records, quarantined_records, validation_rate_pct, quarantine_pct)
     df = _safe_read_parquet("data/gold/quality_kpis.parquet")
     if df is not None and not df.empty:
-        if "quality_score" in df.columns:
-            kpis["data_quality_score"] = round(df["quality_score"].mean(), 2)
-        if "compliance_pct" in df.columns:
-            kpis["environmental_compliance"] = round(df["compliance_pct"].mean(), 2)
+        if "validation_rate_pct" in df.columns:
+            kpis["data_quality_score"] = round(df["validation_rate_pct"].mean(), 2)
 
-    # Safety KPIs
+    # Pipeline KPIs (columns: stream, run_count, avg_duration_sec, avg_quality_pct, total_records_processed, records_per_sec)
+    df = _safe_read_parquet("data/gold/pipeline_kpis.parquet")
+    if df is not None and not df.empty:
+        if "avg_quality_pct" in df.columns:
+            kpis["pipeline_success_rate"] = round(df["avg_quality_pct"].mean(), 2)
+
+    # Safety KPIs (columns: severity, alert_count, avg_response_sec, auto_cleared, escalated, resolution_rate_pct)
     df = _safe_read_parquet("data/gold/safety_kpis.parquet")
     if df is not None and not df.empty:
         if "avg_response_sec" in df.columns:
             kpis["safety_incident_response"] = round(df["avg_response_sec"].mean(), 2)
+
+    # Environmental compliance from quality KPIs (use overall validation rate)
+    if "data_quality_score" in kpis:
+        kpis["environmental_compliance"] = kpis["data_quality_score"]
 
     # Evaluate against thresholds
     evaluated = {}
@@ -155,15 +162,20 @@ def _get_anomalies() -> dict:
 
     anomalies = []
     try:
-        if "status" in df.columns:
-            failures = df[df["status"] != "success"]
+        # Actual columns: run_timestamp, stage, stream, total_records, passed, failed, quality_score, duration_sec
+        if "quality_score" in df.columns:
+            failures = df[df["quality_score"] < 1.0]
             if not failures.empty:
                 for _, row in failures.head(10).iterrows():
-                    entry = {"stream": row.get("stream", "unknown"), "status": row.get("status")}
-                    if "error_message" in df.columns:
-                        entry["error"] = row.get("error_message", "")
-                    if "timestamp" in df.columns:
-                        entry["timestamp"] = str(row.get("timestamp", ""))
+                    entry = {
+                        "stream": row.get("stream", "unknown"),
+                        "stage": row.get("stage", "unknown"),
+                        "quality_score": round(row.get("quality_score", 0), 4),
+                        "failed_records": int(row.get("failed", 0)),
+                        "total_records": int(row.get("total_records", 0)),
+                    }
+                    if "run_timestamp" in df.columns:
+                        entry["timestamp"] = str(row.get("run_timestamp", ""))
                     anomalies.append(entry)
     except Exception as e:
         return {"error": str(e)}
@@ -223,94 +235,61 @@ def build_ai_context() -> dict:
 
 
 def format_context_for_prompt(context: dict) -> str:
-    """Render the context dict into a readable text block for Claude."""
+    """Render the context dict into a compact text block for the LLM."""
     lines = []
     lines.append(f"Timestamp: {context.get('timestamp', 'N/A')}")
-    lines.append(f"Airport: {context.get('airport', 'N/A')}")
-    lines.append("")
 
     # Pipeline Health
-    lines.append("=== PIPELINE HEALTH ===")
     ph = context.get("pipeline_health", {})
-    if ph.get("status") == "no_data":
-        lines.append("No pipeline data available.")
-    else:
-        lines.append(f"Total runs: {ph.get('total_runs', 'N/A')}")
-        lines.append(f"Success rate: {ph.get('success_rate', 'N/A')}%")
-        lines.append(f"Avg duration: {ph.get('avg_duration_sec', 'N/A')}s")
+    if ph.get("status") not in ("no_data", "schema_mismatch"):
+        lines.append("\n=== PIPELINE HEALTH ===")
+        lines.append(f"Runs: {ph.get('total_runs', 'N/A')}, Success: {ph.get('success_rate', 'N/A')}%, Avg duration: {ph.get('avg_duration_sec', 'N/A')}s")
         per_stream = ph.get("per_stream", {})
         if per_stream:
-            lines.append("Per-stream breakdown:")
             for stream, stats in per_stream.items():
-                lines.append(f"  {stream}: {stats.get('success_rate', 'N/A')}% "
-                             f"({stats.get('runs', 0)} runs)")
-    lines.append("")
+                lines.append(f"  {stream}: {stats.get('success_rate', 'N/A')}% ({stats.get('runs', 0)} runs)")
 
-    # KPI Summary
-    lines.append("=== KPI SUMMARY ===")
+    # KPI Summary — only include KPIs with data
     kpis = context.get("kpi_summary", {})
+    kpi_lines = []
     for kpi_name, info in kpis.items():
-        if isinstance(info, dict):
+        if isinstance(info, dict) and info.get("status") != "no_data":
             value = info.get("value", "N/A")
-            status = info.get("status", "unknown")
             target = info.get("target", "N/A")
             unit = info.get("unit", "")
-            indicator = "✅" if status == "healthy" else "⚠️" if status == "warning" else "❓"
-            lines.append(f"  {indicator} {kpi_name}: {value} {unit} (target: {target} {unit}) [{status}]")
-    lines.append("")
+            indicator = "✅" if info.get("status") == "healthy" else "⚠️"
+            kpi_lines.append(f"  {indicator} {kpi_name}: {value} {unit} (target: {target} {unit})")
+    if kpi_lines:
+        lines.append("\n=== KPIs ===")
+        lines.extend(kpi_lines)
 
     # Quality Issues
-    lines.append("=== QUALITY ISSUES ===")
     qi = context.get("quality_issues", {})
-    if qi.get("status") == "no_quarantine_data":
-        lines.append("No quarantine data found.")
-    else:
-        for stream, info in qi.items():
-            if isinstance(info, dict):
-                lines.append(f"  {stream}: {info.get('quarantined_records', 0)} quarantined records")
-                for reason, count in info.get("top_failure_reasons", {}).items():
-                    lines.append(f"    - {reason}: {count}")
-    lines.append("")
+    qi_lines = []
+    for stream, info in qi.items():
+        if isinstance(info, dict) and info.get("quarantined_records", 0) > 0:
+            qi_lines.append(f"  {stream}: {info['quarantined_records']} quarantined")
+            for reason, count in info.get("top_failure_reasons", {}).items():
+                qi_lines.append(f"    - {reason}: {count}")
+    if qi_lines:
+        lines.append("\n=== QUALITY ISSUES ===")
+        lines.extend(qi_lines)
 
-    # Anomalies
-    lines.append("=== ANOMALIES ===")
+    # Anomalies — only if any exist
     anomalies = context.get("anomalies", {})
-    if anomalies.get("status") == "no_data":
-        lines.append("No anomaly data available.")
-    else:
-        lines.append(f"Total failures detected: {anomalies.get('count', 0)}")
-        for failure in anomalies.get("recent_failures", []):
-            lines.append(f"  - Stream: {failure.get('stream', 'unknown')} | "
-                         f"Status: {failure.get('status', 'unknown')} | "
-                         f"Error: {failure.get('error', 'N/A')} | "
-                         f"Time: {failure.get('timestamp', 'N/A')}")
-    lines.append("")
+    if anomalies.get("count", 0) > 0:
+        lines.append(f"\n=== ANOMALIES ({anomalies['count']}) ===")
+        for f in anomalies.get("recent_failures", [])[:5]:
+            lines.append(f"  {f.get('stream')}/{f.get('stage')}: quality={f.get('quality_score')}, failed={f.get('failed_records')}/{f.get('total_records')}")
 
-    # Lineage Impact
-    lines.append("=== LINEAGE IMPACT ===")
+    # Lineage Impact — only if any
     impact = context.get("lineage_impact", {})
-    if not impact:
-        lines.append("No lineage impact detected.")
-    else:
+    if impact:
+        lines.append("\n=== IMPACT ===")
         for stream, info in impact.items():
-            lines.append(f"  Stream '{stream}' failure impacts:")
             if isinstance(info, dict):
-                for kpi in info.get("affected_kpis", []):
-                    lines.append(f"    - KPI: {kpi}")
-                for gold in info.get("affected_gold_tables", []):
-                    lines.append(f"    - Gold table: {gold}")
-    lines.append("")
-
-    # Recent Alerts
-    lines.append("=== RECENT ALERTS ===")
-    alerts = context.get("recent_alerts", [])
-    if not alerts:
-        lines.append("No recent alerts.")
-    else:
-        for alert in alerts[:10]:
-            if isinstance(alert, dict):
-                lines.append(f"  [{alert.get('severity', 'N/A')}] "
-                             f"{alert.get('message', alert.get('description', 'N/A'))}")
-    lines.append("")
+                kpis_affected = ", ".join(info.get("affected_kpis", []))
+                if kpis_affected:
+                    lines.append(f"  {stream} → KPIs: {kpis_affected}")
 
     return "\n".join(lines)

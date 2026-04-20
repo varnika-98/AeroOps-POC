@@ -10,7 +10,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from utils.theme import COLORS, apply_theme, metric_card, page_header, page_loader
+from utils.theme import COLORS, SVG_ICONS, apply_theme, metric_card, page_header, page_loader, section_header
 from utils.charts import stacked_bar_chart, time_series_chart
 from utils.kpi_calculator import get_pipeline_health
 
@@ -44,7 +44,7 @@ def load_pipeline_kpis():
 st.set_page_config(page_title="Pipeline Health & Logs", page_icon="🔧", layout="wide")
 apply_theme(st)
 st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
-st.markdown(page_header("Pipeline Health & Logs", "🔧"), unsafe_allow_html=True)
+st.markdown(page_header("Pipeline Health & Logs", SVG_ICONS["wrench"]), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Top metrics row
@@ -98,7 +98,7 @@ with col4:
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.subheader("🗓️ Pipeline Run Timeline")
+st.markdown(section_header("Pipeline Run Timeline", "calendar"), unsafe_allow_html=True)
 
 if logs_df is not None and all(c in logs_df.columns for c in ["run_timestamp", "duration_sec", "stream", "status"]):
     timeline_df = logs_df.copy()
@@ -130,7 +130,7 @@ st.markdown("---")
 col_left, col_right = st.columns(2)
 
 with col_left:
-    st.subheader("📈 Success / Failure Trend")
+    st.markdown(section_header("Success / Failure Trend", "chart_up"), unsafe_allow_html=True)
     if logs_df is not None and "run_timestamp" in logs_df.columns and "status" in logs_df.columns:
         trend_df = logs_df.copy()
         trend_df["run_timestamp"] = pd.to_datetime(trend_df["run_timestamp"])
@@ -153,7 +153,7 @@ with col_left:
         st.info("Pipeline log data not available.")
 
 with col_right:
-    st.subheader("⏱️ Duration by Stage")
+    st.markdown(section_header("Duration by Stage", "clock"), unsafe_allow_html=True)
     if logs_df is not None and all(c in logs_df.columns for c in ["stage", "stream", "duration_sec"]):
         dur_df = logs_df.groupby(["stream", "stage"])["duration_sec"].mean().reset_index()
         fig_dur = px.bar(
@@ -177,7 +177,7 @@ with col_right:
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.subheader("🚀 Throughput per Stream")
+st.markdown(section_header("Throughput per Stream", "rocket"), unsafe_allow_html=True)
 
 if logs_df is not None and all(c in logs_df.columns for c in ["run_timestamp", "stream", "total_records"]):
     tp_df = logs_df.copy()
@@ -200,7 +200,7 @@ else:
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.subheader("📋 Pipeline Log Viewer")
+st.markdown(section_header("Pipeline Log Viewer", "clipboard"), unsafe_allow_html=True)
 
 if logs_df is not None:
     display_cols = [
