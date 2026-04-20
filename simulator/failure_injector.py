@@ -15,7 +15,7 @@ def inject_schema_drift(
 ) -> dict[str, list[dict]]:
     """Simulate schema drift by converting wind_speed values from mph → kph.
 
-    Multiplies wind_speed_kph by 1.6, making some values exceed the
+    Multiplies wind_speed_kph by 4.0, making many values exceed the
     expected 0–200 kph validation range.
 
     Args:
@@ -31,11 +31,11 @@ def inject_schema_drift(
     affected = 0
     for event in events[stream]:
         if "wind_speed_kph" in event:
-            event["wind_speed_kph"] = round(event["wind_speed_kph"] * 1.6, 1)
+            event["wind_speed_kph"] = round(event["wind_speed_kph"] * 4.0, 1)
             affected += 1
 
     print(f"  [!] Schema drift injected: {affected:,} runway events "
-          f"-- wind_speed_kph multiplied by 1.6")
+          f"-- wind_speed_kph multiplied by 4.0")
     return events
 
 
@@ -44,10 +44,10 @@ def inject_sensor_outage(
     stream: str = "passengers",
     checkpoints: int = 3,
 ) -> dict[str, list[dict]]:
-    """Simulate sensor outage by removing events from random checkpoints.
+    """Simulate sensor outage by corrupting events from random checkpoints.
 
-    Drops all passenger events originating from *checkpoints* randomly
-    selected checkpoint IDs, simulating sensors going offline.
+    Sets wait_time_minutes to -1 (invalid) and nullifies checkpoint field
+    for events from affected checkpoints, triggering validation failures.
 
     Args:
         events: All-stream event dict from generate_all_events().
@@ -60,7 +60,6 @@ def inject_sensor_outage(
     if stream not in events:
         raise ValueError(f"Stream '{stream}' not found in events")
 
-    # Collect unique checkpoint values from the stream
     all_checkpoints = list(
         {e.get("checkpoint") for e in events[stream] if e.get("checkpoint")}
     )
@@ -69,13 +68,14 @@ def inject_sensor_outage(
         return events
 
     offline = random.sample(all_checkpoints, min(checkpoints, len(all_checkpoints)))
-    original_count = len(events[stream])
-    events[stream] = [
-        e for e in events[stream] if e.get("checkpoint") not in offline
-    ]
-    removed = original_count - len(events[stream])
+    corrupted = 0
+    for e in events[stream]:
+        if e.get("checkpoint") in offline:
+            e["wait_time_minutes"] = -1
+            e["checkpoint"] = None
+            corrupted += 1
 
-    print(f"  [!] Sensor outage injected: removed {removed:,} events from "
+    print(f"  [!] Sensor outage injected: corrupted {corrupted:,} events from "
           f"checkpoints {offline}")
     return events
 

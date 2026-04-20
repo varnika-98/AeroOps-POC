@@ -22,7 +22,8 @@ def _safe_read(relative_path: str) -> pd.DataFrame | None:
 
 def get_pipeline_health() -> dict:
     """Returns pipeline success rate, avg duration, throughput from logs."""
-    df = _safe_read("data/logs/pipeline_runs.parquet")
+    # Orchestrator writes pipeline_logs.parquet
+    df = _safe_read("data/logs/pipeline_logs.parquet")
     if df is None:
         return _NO_DATA.copy()
 
@@ -30,18 +31,31 @@ def get_pipeline_health() -> dict:
     if total == 0:
         return {"total_runs": 0, "success_rate": 0, "avg_duration_sec": 0, "throughput_per_hour": 0}
 
-    success = (df["status"] == "success").sum() if "status" in df.columns else 0
+    # Count unique pipeline runs (each run logs multiple stages)
+    if "run_timestamp" in df.columns:
+        unique_runs = df["run_timestamp"].nunique()
+    else:
+        unique_runs = total
+
+    # Success: a run is successful if it has a gold stage entry (pipeline completed)
+    if "status" in df.columns:
+        success = int((df["status"] == "success").sum())
+    elif "stage" in df.columns:
+        # Each complete run has a "gold" stage entry
+        success = int((df["stage"] == "gold").sum())
+    else:
+        success = unique_runs
+
     avg_dur = round(df["duration_sec"].mean(), 2) if "duration_sec" in df.columns else 0
 
-    # Estimate throughput from records processed
-    records = df["records_processed"].sum() if "records_processed" in df.columns else 0
+    records = int(df["total_records"].sum()) if "total_records" in df.columns else 0
 
     return {
-        "total_runs": int(total),
+        "total_runs": int(unique_runs),
         "successful_runs": int(success),
-        "success_rate": round(success / total * 100, 2),
+        "success_rate": round(success / unique_runs * 100, 2) if unique_runs else 0,
         "avg_duration_sec": avg_dur,
-        "total_records_processed": int(records),
+        "total_records_processed": records,
     }
 
 

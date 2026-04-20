@@ -9,6 +9,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 # ── Page config (MUST be the first Streamlit command) ──────────────────────
@@ -37,6 +38,50 @@ from pipeline.orchestrator import run_pipeline
 apply_theme(st)
 
 DATA_ROOT = _PROJECT_ROOT / "data"
+
+# ── Section header SVG icons (navy, inline) ────────────────────────────────
+_NAVY = "#1a1a2e"
+
+SVG_SYSTEM_HEALTH = (
+    f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+    f'stroke="{_NAVY}" stroke-width="2" style="vertical-align:middle">'
+    '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'
+)
+
+SVG_LIVE_AIRPORT = (
+    f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+    f'stroke="{_NAVY}" stroke-width="2" style="vertical-align:middle">'
+    '<rect x="2" y="3" width="20" height="14" rx="2"/>'
+    '<circle cx="12" cy="10" r="4"/>'
+    '<ellipse cx="12" cy="10" rx="1.8" ry="4"/>'
+    '<line x1="8" y1="10" x2="16" y2="10"/>'
+    '<line x1="8" y1="21" x2="16" y2="21"/>'
+    '<line x1="12" y1="17" x2="12" y2="21"/></svg>'
+)
+
+SVG_MEDALLION = (
+    f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+    f'stroke="{_NAVY}" stroke-width="2" style="vertical-align:middle">'
+    '<path d="M12 2L2 7l10 5 10-5-10-5z"/>'
+    '<path d="M2 17l10 5 10-5"/>'
+    '<path d="M2 12l10 5 10-5"/></svg>'
+)
+
+SVG_RECENT_ALERTS = (
+    f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+    f'stroke="{_NAVY}" stroke-width="2" style="vertical-align:middle">'
+    '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+    '<line x1="12" y1="8" x2="12" y2="12"/>'
+    '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+)
+
+SVG_EVENTS_PROCESSED = (
+    f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+    f'stroke="{_NAVY}" stroke-width="2" style="vertical-align:middle">'
+    '<path d="M4 6c4 0 4 6 8 6s4-6 8-6"/>'
+    '<path d="M4 12c4 0 4 6 8 6s4-6 8-6"/>'
+    '<path d="M4 18c4 0 4 6 8 6s4-6 8-6"/></svg>'
+)
 
 
 # ── Cached data loaders ───────────────────────────────────────────────────
@@ -84,18 +129,26 @@ def load_silver_counts() -> dict[str, int]:
 
 @st.cache_data(ttl=60)
 def load_bronze_counts() -> dict[str, int]:
-    """Return record counts per Bronze stream."""
+    """Return record counts per Bronze stream (reads JSON batch files)."""
+    import json as _json
     counts: dict[str, int] = {}
     bronze_dir = DATA_ROOT / "bronze"
     if not bronze_dir.exists():
         return counts
     for stream in STREAM_ICONS:
-        path = bronze_dir / f"{stream}.parquet"
-        if path.exists():
+        stream_dir = bronze_dir / stream
+        if not stream_dir.exists():
+            continue
+        total = 0
+        for jf in stream_dir.glob("*.json"):
             try:
-                counts[stream] = len(pd.read_parquet(path))
+                with open(jf, encoding="utf-8") as fh:
+                    data = _json.load(fh)
+                    total += len(data) if isinstance(data, list) else 1
             except Exception:
-                counts[stream] = 0
+                pass
+        if total:
+            counts[stream] = total
     return counts
 
 
@@ -168,15 +221,15 @@ with st.sidebar:
         with st.spinner("Running Bronze → Silver → Gold pipeline…"):
             try:
                 result = run_pipeline()
-                st.success(
-                    f"Pipeline complete — {result.get('total_records_processed', 'N/A')} records processed"
-                )
+                total = sum(r["total_records"] for r in result.get("silver_results", {}).values())
                 st.cache_data.clear()
+                st.session_state["_pipeline_msg"] = f"Pipeline complete — {total:,} records processed"
+                st.rerun()
             except Exception as exc:
                 st.error(f"Pipeline failed: {exc}")
 
     if st.button("🔄 Generate New Data", use_container_width=True):
-        with st.spinner("Generating synthetic airport data…"):
+        with st.spinner("Generating synthetic airport data & running pipeline…"):
             try:
                 from simulator.airport_generator import generate_all_events, write_events_to_json
                 from simulator.failure_injector import (
@@ -197,10 +250,19 @@ with st.sidebar:
 
                 write_events_to_json(events)
                 result = run_pipeline()
-                st.success("Data generated & pipeline executed ✅")
+                total = sum(r["total_records"] for r in result.get("silver_results", {}).values())
+                quarantined = sum(r["quarantined"] for r in result.get("silver_results", {}).values())
                 st.cache_data.clear()
+                st.session_state["_generate_msg"] = f"Generated & processed {total:,} records ({quarantined:,} quarantined) ✅"
+                st.rerun()
             except Exception as exc:
                 st.error(f"Data generation failed: {exc}")
+
+    # Show success messages persisted through rerun
+    if "_pipeline_msg" in st.session_state:
+        st.success(st.session_state.pop("_pipeline_msg"))
+    if "_generate_msg" in st.session_state:
+        st.success(st.session_state.pop("_generate_msg"))
 
     st.divider()
 
@@ -248,7 +310,7 @@ if not has_data:
     )
 
 # ── 1. Live Airport Stats ─────────────────────────────────────────────────
-st.markdown("### 📊 Live Airport Stats")
+st.markdown(f'{SVG_LIVE_AIRPORT} &nbsp; <span style="font-size:1.3rem;font-weight:700;color:{_NAVY}">Live Airport Stats</span>', unsafe_allow_html=True)
 col1, col2, col3, col4 = st.columns(4)
 
 total_flights = flight_kpis.get("total_flights", 0) if has_data else 0
@@ -287,30 +349,45 @@ with col4:
 st.markdown("")
 
 # ── 2. System Health per Stream ────────────────────────────────────────────
-st.markdown("### 🚦 System Health per Stream")
+st.markdown(f'{SVG_SYSTEM_HEALTH} &nbsp; <span style="font-size:1.3rem;font-weight:700;color:{_NAVY}">System Health per Stream</span>', unsafe_allow_html=True)
 stream_cols = st.columns(6)
+
+_STREAM_SVGS = {
+    "flights": f'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{COLORS["navy"]}" stroke-width="1.8"><path d="M17.8 19.2L16 11l3.5-3.5C20.3 6.7 21 5.4 21 4.5c0-.6-.2-.9-.3-1-.1-.1-.4-.3-1-.3-.9 0-2.2.7-3 1.5L13 8.2 5 6.4a.5.5 0 0 0-.5.2l-1 1.3a.5.5 0 0 0 .1.6L9 12l-2 2.5H4.5a.5.5 0 0 0-.4.2l-1 1.3a.5.5 0 0 0 .1.6l3 1.5 1.5 3a.5.5 0 0 0 .6.1l1.3-1a.5.5 0 0 0 .2-.4V17.5l2.5-2 3.5 5.4a.5.5 0 0 0 .6.1l1.3-1a.5.5 0 0 0 .2-.5z"/></svg>',
+    "passengers": f'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{COLORS["navy"]}" stroke-width="1.8"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>',
+    "cargo": f'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{COLORS["navy"]}" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M12 12v4"/><path d="M3 12h18"/></svg>',
+    "environmental": f'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{COLORS["navy"]}" stroke-width="1.8"><path d="M12 9a4 4 0 0 0-2 7.5"/><path d="M12 3v2"/><path d="M6.6 18.4l-1.4 1.4"/><path d="M20 12h-2"/><path d="M6 12H4"/><path d="M12 5a7 7 0 0 1 7 7c0 3-2 5.4-4 6.5"/><line x1="12" y1="12" x2="12" y2="21"/></svg>',
+    "runway": f'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{COLORS["navy"]}" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="10" x2="12" y2="12"/><line x1="12" y1="14" x2="12" y2="16"/><line x1="12" y1="18" x2="12" y2="20"/></svg>',
+    "security": f'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="{COLORS["navy"]}" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>',
+}
 
 streams_ordered = list(STREAM_ICONS.keys())
 for idx, stream in enumerate(streams_ordered):
-    icon = STREAM_ICONS[stream]
+    svg_icon = _STREAM_SVGS.get(stream, "")
     with stream_cols[idx]:
         if isinstance(quality_scores, dict) and stream in quality_scores:
             info = quality_scores[stream]
             score = info.get("quality_score", 0) if isinstance(info, dict) else 0
             status = _quality_status(score)
-            indicator = status_indicator(status)
+            status_color = STATUS_COLORS.get(status, COLORS["sky_blue"])
+            if status == "healthy":
+                bg_tint, label = "#e8f8f0", "Healthy"
+            elif status == "warning":
+                bg_tint, label = "#fef9e7", "Warning"
+            else:
+                bg_tint, label = "#fdedec", "Critical"
             st.markdown(
                 f"""
-                <div style="background:{COLORS['white']};border-radius:10px;padding:1rem;
-                text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-                    <div style="font-size:2rem;">{icon}</div>
-                    <div style="font-weight:600;color:{COLORS['navy']};text-transform:capitalize;">
-                        {stream}
-                    </div>
-                    <div style="font-size:1.5rem;">{indicator}</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:{STATUS_COLORS.get(status, COLORS['sky_blue'])};">
-                        {score}%
-                    </div>
+                <div style="background:{bg_tint};border-left:5px solid {status_color};
+                border-radius:8px;padding:1rem;text-align:center;
+                box-shadow:0 2px 8px rgba(0,0,0,0.06);min-height:160px;">
+                    <div>{svg_icon}</div>
+                    <div style="font-weight:700;color:{COLORS['navy']};text-transform:capitalize;
+                        margin:0.3rem 0;">{stream}</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:{status_color};">
+                        {score}%</div>
+                    <div style="font-size:0.8rem;color:{status_color};font-weight:600;
+                        margin-top:0.3rem;">{label}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -318,14 +395,16 @@ for idx, stream in enumerate(streams_ordered):
         else:
             st.markdown(
                 f"""
-                <div style="background:{COLORS['white']};border-radius:10px;padding:1rem;
-                text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-                    <div style="font-size:2rem;">{icon}</div>
-                    <div style="font-weight:600;color:{COLORS['navy']};text-transform:capitalize;">
-                        {stream}
-                    </div>
-                    <div style="font-size:1.5rem;">⚪</div>
-                    <div style="font-size:0.85rem;color:{COLORS['dark_gray']};">No data</div>
+                <div style="background:{COLORS['white']};border-left:5px solid {COLORS['dark_gray']};
+                border-radius:8px;padding:1rem;text-align:center;
+                box-shadow:0 2px 8px rgba(0,0,0,0.06);min-height:160px;">
+                    <div>{svg_icon}</div>
+                    <div style="font-weight:700;color:{COLORS['navy']};text-transform:capitalize;
+                        margin:0.3rem 0;">{stream}</div>
+                    <div style="font-size:1.6rem;font-weight:800;color:{COLORS['dark_gray']};">
+                        —</div>
+                    <div style="font-size:0.8rem;color:{COLORS['dark_gray']};font-weight:600;
+                        margin-top:0.3rem;">No data</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -333,55 +412,63 @@ for idx, stream in enumerate(streams_ordered):
 
 st.markdown("")
 
-# ── 3. Medallion Layer Health ──────────────────────────────────────────────
-st.markdown("### 🏅 Medallion Layer Health")
+# ── 3. Medallion Layer Health + Recent Alerts (side by side) ──────────────
+medal_col, alerts_col = st.columns(2)
 
-bronze_counts = load_bronze_counts()
-silver_counts = load_silver_counts()
-gold_counts = load_gold_counts()
+# -- Left: Medallion Layer Health --
+with medal_col:
+    st.markdown(f'{SVG_MEDALLION} &nbsp; <span style="font-size:1.3rem;font-weight:700;color:{_NAVY}">Medallion Layer Health</span>', unsafe_allow_html=True)
 
-if bronze_counts or silver_counts or gold_counts:
-    layer_data = {
-        "Layer": ["Bronze", "Silver", "Gold"],
-        "Records": [
-            sum(bronze_counts.values()),
-            sum(silver_counts.values()),
-            sum(gold_counts.values()),
-        ],
-    }
-    layer_df = pd.DataFrame(layer_data)
+    bronze_counts = load_bronze_counts()
+    silver_counts = load_silver_counts()
 
-    # Build a stacked view: per-stream counts at each layer
-    stacked_rows = []
-    for stream in streams_ordered:
-        stacked_rows.append(
-            {
-                "Stream": stream,
-                "Bronze": bronze_counts.get(stream, 0),
-                "Silver": silver_counts.get(stream, 0),
-            }
+    if bronze_counts or silver_counts:
+        stacked_rows = []
+        for stream in streams_ordered:
+            stacked_rows.append(
+                {
+                    "Stream": stream,
+                    "Bronze": bronze_counts.get(stream, 0),
+                    "Silver": silver_counts.get(stream, 0),
+                }
+            )
+        stacked_df = pd.DataFrame(stacked_rows)
+
+        _BRONZE_COLOR = "#cd7f32"
+        _SILVER_COLOR = "#8a9bae"
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=stacked_df["Stream"], y=stacked_df["Bronze"], name="Bronze",
+                             marker_color=_BRONZE_COLOR, width=0.22))
+        fig.add_trace(go.Bar(x=stacked_df["Stream"], y=stacked_df["Silver"], name="Silver",
+                             marker_color=_SILVER_COLOR, width=0.22))
+        fig.update_layout(
+            barmode="group",
+            bargap=0.35,
+            bargroupgap=0.05,
+            height=400,
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=40, r=20, t=40, b=40),
+            font=dict(family="system-ui", size=12, color=COLORS["navy"]),
+            title=dict(text="Records per Stream by Layer", font=dict(size=14, color=COLORS["navy"])),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+            yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+            xaxis=dict(showgrid=False),
         )
-    stacked_df = pd.DataFrame(stacked_rows)
-    fig = stacked_bar_chart(stacked_df, "Stream", ["Bronze", "Silver"], "Records per Stream by Layer")
-    fig.update_layout(height=350)
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.caption("No medallion data available yet.")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.caption("No medallion data available yet.")
 
-# ── 4. Two-column layout: Alerts + Events per Stream ──────────────────────
-left_col, right_col = st.columns(2)
-
-# -- Left: Recent Alerts Feed --
-with left_col:
-    st.markdown("### 🚨 Recent Alerts")
+# -- Right: Recent Alerts Feed --
+with alerts_col:
+    st.markdown(f'{SVG_RECENT_ALERTS} &nbsp; <span style="font-size:1.3rem;font-weight:700;color:{_NAVY}">Recent Alerts</span>', unsafe_allow_html=True)
     security_df = load_security_events()
 
     if security_df is not None and not security_df.empty:
-        SEVERITY_BADGES = {
-            "critical": f"background:{COLORS['danger_red']};color:#fff",
-            "high": f"background:{COLORS['safety_orange']};color:#fff",
-            "medium": f"background:{COLORS['warning_yellow']};color:#000",
-            "low": f"background:{COLORS['sky_blue']};color:#fff",
+        SEV_COLORS = {
+            "critical": COLORS["danger_red"],
+            "high": COLORS["safety_orange"],
+            "medium": COLORS["warning_yellow"],
+            "low": "#58d68d",
         }
 
         severity_col = None
@@ -407,39 +494,31 @@ with left_col:
             display_df = display_df.sort_values(time_col, ascending=False)
         display_df = display_df.head(20)
 
-        alerts_html = '<div style="max-height:350px;overflow-y:auto;padding-right:0.5rem;">'
+        alerts_html = '<div style="position:relative;"><div style="max-height:380px;overflow-y:auto;padding-bottom:24px;">'
         for _, row in display_df.iterrows():
             sev = str(row[severity_col]).lower() if severity_col else "low"
-            badge_style = SEVERITY_BADGES.get(sev, SEVERITY_BADGES["low"])
+            sev_color = SEV_COLORS.get(sev, SEV_COLORS["low"])
             ts_str = str(row[time_col])[:19] if time_col else ""
             desc = str(row[desc_col]) if desc_col else "Alert"
+            badge_fg = "#000" if sev in ("medium", "low") else "#fff"
             alerts_html += f"""
-            <div style="background:{COLORS['white']};border-radius:8px;padding:0.6rem 0.8rem;
-            margin-bottom:0.5rem;box-shadow:0 1px 4px rgba(0,0,0,0.06);display:flex;
-            align-items:center;gap:0.6rem;">
-                <span style="{badge_style};padding:2px 8px;border-radius:4px;
-                font-size:0.7rem;font-weight:700;text-transform:uppercase;">{sev}</span>
-                <span style="flex:1;color:{COLORS['navy']};font-size:0.85rem;">{desc}</span>
-                <span style="color:{COLORS['dark_gray']};font-size:0.75rem;white-space:nowrap;">{ts_str}</span>
+            <div style="border-left:4px solid {sev_color};background:#fff;border-radius:8px;
+            padding:10px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-weight:600;color:{COLORS['navy']};font-size:0.85rem;">{desc}</span>
+                <span style="font-size:0.7rem;color:#999;">{ts_str[11:] if len(ts_str) > 11 else ts_str}</span>
+              </div>
+              <span style="display:inline-block;margin-top:4px;background:{sev_color};color:{badge_fg};
+              padding:1px 8px;border-radius:10px;font-size:0.65rem;font-weight:700;
+              text-transform:uppercase;letter-spacing:0.5px;">{sev}</span>
             </div>"""
-        alerts_html += "</div>"
+        alerts_html += '</div>'
+        alerts_html += '<div style="position:absolute;bottom:0;left:0;right:0;height:32px;background:linear-gradient(transparent, #fff);pointer-events:none;border-radius:0 0 8px 8px;"></div>'
+        alerts_html += f'<div style="text-align:center;font-size:0.7rem;color:#aaa;margin-top:2px;">Scroll for more &#x25BE;</div>'
+        alerts_html += '</div>'
         st.markdown(alerts_html, unsafe_allow_html=True)
     else:
         st.caption("No security alerts available.")
-
-# -- Right: Events Processed per Stream --
-with right_col:
-    st.markdown("### 📈 Events Processed per Stream")
-    silver = load_silver_counts()
-    if silver:
-        stream_df = pd.DataFrame(
-            {"Stream": list(silver.keys()), "Records": list(silver.values())}
-        )
-        fig = bar_chart(stream_df, "Stream", "Records", "Silver Layer Records by Stream")
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.caption("No stream data available.")
 
 # ── Footer ─────────────────────────────────────────────────────────────────
 st.markdown("---")
