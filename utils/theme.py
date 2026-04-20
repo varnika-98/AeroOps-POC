@@ -184,3 +184,75 @@ def page_header(title: str, icon: str = "✈️") -> str:
         <h1>{icon} {title}</h1>
     </div>
     """
+
+
+def page_loader(duration: float = 0.5) -> str:
+    """Return HTML/CSS for a radar-style page loader overlay.
+
+    Uses pure CSS animation to auto-dismiss. Only shows once per browser
+    session (uses sessionStorage to track). Covers the entire viewport
+    including topbar and sidebar.
+
+    Args:
+        duration: Seconds to display the loader before fade-out.
+    """
+    dur_ms = int(duration * 1000)
+    return f"""
+<style>
+@keyframes radar-ping {{
+    0% {{ transform: scale(0.3); opacity: 1; }}
+    100% {{ transform: scale(2.5); opacity: 0; }}
+}}
+@keyframes loader-dismiss {{
+    0% {{ opacity: 1; }}
+    100% {{ opacity: 0; visibility: hidden; pointer-events: none; }}
+}}
+#aeroops-loader {{
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #1a1a2e; z-index: 9999999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    animation: loader-dismiss 0.4s ease {duration}s forwards;
+}}
+#aeroops-loader.loader-hidden {{ display: none !important; }}
+#aeroops-loader .radar-container {{
+    position: relative; width: 120px; height: 120px; margin-bottom: 2rem;
+}}
+#aeroops-loader .radar-ring {{
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border: 2px solid #4682B4; border-radius: 50%;
+    animation: radar-ping 2s ease-out infinite;
+}}
+#aeroops-loader .radar-ring:nth-child(2) {{ animation-delay: 0.5s; }}
+#aeroops-loader .radar-ring:nth-child(3) {{ animation-delay: 1.0s; }}
+#aeroops-loader .radar-dot {{
+    position: absolute; top: 50%; left: 50%; width: 14px; height: 14px;
+    background: #4682B4; border-radius: 50%; transform: translate(-50%, -50%);
+    box-shadow: 0 0 20px #4682B4;
+}}
+#aeroops-loader .loader-title {{ color: #fff; font-size: 2rem; font-weight: 700; }}
+#aeroops-loader .loader-sub {{ color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 0.5rem; }}
+</style>
+<div id="aeroops-loader">
+    <div class="radar-container">
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+        <div class="radar-ring"></div>
+        <div class="radar-dot"></div>
+    </div>
+    <div class="loader-title">✈ AeroOps AI</div>
+    <div class="loader-sub">Scanning Airport Systems...</div>
+</div>
+<script>
+(function() {{
+    var loader = document.getElementById('aeroops-loader');
+    if (!loader) return;
+    var key = 'aeroops_loaded';
+    if (sessionStorage.getItem(key)) {{
+        loader.classList.add('loader-hidden');
+        return;
+    }}
+    sessionStorage.setItem(key, '1');
+    setTimeout(function() {{ loader.classList.add('loader-hidden'); }}, {dur_ms + 500});
+}})();
+</script>
+"""

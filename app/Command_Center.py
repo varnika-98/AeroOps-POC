@@ -22,6 +22,7 @@ from utils.theme import (
     apply_theme,
     metric_card,
     page_header,
+    page_loader,
     status_indicator,
 )
 from utils.charts import bar_chart, stacked_bar_chart
@@ -36,6 +37,7 @@ from pipeline.orchestrator import run_pipeline
 
 # ── Apply custom CSS theme ─────────────────────────────────────────────────
 apply_theme(st)
+st.markdown(page_loader(duration=1.5), unsafe_allow_html=True)
 
 DATA_ROOT = _PROJECT_ROOT / "data"
 

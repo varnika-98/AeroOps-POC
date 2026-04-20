@@ -16,7 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils.theme import COLORS, STATUS_COLORS, STREAM_ICONS, apply_theme, metric_card, status_indicator, page_header
+from utils.theme import COLORS, STATUS_COLORS, STREAM_ICONS, apply_theme, metric_card, status_indicator, page_header, page_loader
 from utils.charts import gauge_chart, bar_chart
 from utils.kpi_calculator import get_data_quality_scores, get_environmental_compliance, get_overall_system_health
 
@@ -24,6 +24,7 @@ from utils.kpi_calculator import get_data_quality_scores, get_environmental_comp
 # Theme
 # ---------------------------------------------------------------------------
 apply_theme(st)
+st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Constants
