@@ -179,23 +179,78 @@ def load_security_events() -> pd.DataFrame | None:
         return None
 
 
-# ── Color shortcuts for f-string usage ─────────────────────────────────────
-_C_WHITE = COLORS["white"]
-_C_LIGHT_GRAY = COLORS["light_gray"]
-_C_SKY_BLUE = COLORS["sky_blue"]
-_C_NAVY = COLORS["navy"]
-_C_DARK_GRAY = COLORS["dark_gray"]
-_C_WARN_YELLOW = COLORS["warning_yellow"]
+# ── Sidebar SVG icons (white/yellow stroke for visibility on steel blue) ───
+_W = COLORS["white"]
+_WY = COLORS["warning_yellow"]
+_accent = 'border-bottom:2px solid rgba(255,255,255,0.3);padding-bottom:6px;margin-bottom:8px;'
+
+SVG_SIDEBAR_FAIL = (
+    f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{_WY}" '
+    f'stroke-width="2" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/>'
+    f'<line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+)
+SVG_SIDEBAR_PIPE = (
+    f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{_W}" '
+    f'stroke-width="2" style="vertical-align:middle"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>'
+    f'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 '
+    f'11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 '
+    f'0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83'
+    f'l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 '
+    f'0 001.51-1.08 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 '
+    f'0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001.08 1.51 1.65 '
+    f'1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26'
+    f'.604.852.997 1.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1.08z"/></svg>'
+)
+SVG_SIDEBAR_REFR = (
+    f'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{_W}" '
+    f'stroke-width="2" style="vertical-align:middle"><path d="M21.5 2v6h-6"/>'
+    f'<path d="M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0118.8-4.3L21.5 8"/>'
+    f'<path d="M22 12.5a10 10 0 01-18.8 4.3L2.5 16"/></svg>'
+)
+
+_SIDEBAR_FAIL_HDR = (
+    f'<div style="display:flex;align-items:center;gap:8px;{_accent}">'
+    f'{SVG_SIDEBAR_FAIL}<span style="font-size:0.85rem;font-weight:700;color:{_WY};'
+    f'text-transform:uppercase;letter-spacing:1.5px;">Failure Scenarios</span></div>'
+)
+_SIDEBAR_PIPE_HDR = (
+    f'<div style="display:flex;align-items:center;gap:8px;{_accent}">'
+    f'{SVG_SIDEBAR_PIPE}<span style="font-size:0.85rem;font-weight:700;color:{_W};'
+    f'text-transform:uppercase;letter-spacing:1.5px;">Pipeline Controls</span></div>'
+)
+_SIDEBAR_REFR_HDR = (
+    f'<div style="display:flex;align-items:center;gap:8px;{_accent}">'
+    f'{SVG_SIDEBAR_REFR}<span style="font-size:0.85rem;font-weight:700;color:{_W};'
+    f'text-transform:uppercase;letter-spacing:1.5px;">Auto Refresh</span></div>'
+)
+
+# ── Sidebar button CSS (Option C: outline style) ──────────────────────────
+st.markdown(f"""
+<style>
+    [data-testid="stSidebar"] .stButton > button {{
+        background: transparent !important;
+        color: {_W} !important;
+        border: 1.5px solid rgba(255,255,255,0.4) !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        font-size: 0.8rem !important;
+        transition: all 0.2s ease !important;
+    }}
+    [data-testid="stSidebar"] .stButton > button:hover {{
+        background: rgba(255,255,255,0.1) !important;
+        border-color: rgba(255,255,255,0.7) !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────
 st.logo(str(_PROJECT_ROOT / "resources" / "logo.svg"), size="large")
 
 with st.sidebar:
     # -- Failure Scenarios --
-    st.markdown(
-        f"<h4 style='color:{_C_WARN_YELLOW}'>⚠️ Failure Scenarios</h4>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(_SIDEBAR_FAIL_HDR, unsafe_allow_html=True)
     st.session_state.setdefault("failure_schema_drift", False)
     st.session_state.setdefault("failure_sensor_outage", False)
     st.session_state.setdefault("failure_traffic_spike", False)
@@ -213,11 +268,8 @@ with st.sidebar:
     st.divider()
 
     # -- Pipeline Controls --
-    st.markdown(
-        f"<h4 style='color:{_C_SKY_BLUE}'>🔧 Pipeline Controls</h4>",
-        unsafe_allow_html=True,
-    )
-    if st.button("▶️ Run Pipeline", use_container_width=True):
+    st.markdown(_SIDEBAR_PIPE_HDR, unsafe_allow_html=True)
+    if st.button("Run Pipeline", icon="⚡", use_container_width=True):
         with st.spinner("Running Bronze → Silver → Gold pipeline…"):
             try:
                 result = run_pipeline()
@@ -228,7 +280,7 @@ with st.sidebar:
             except Exception as exc:
                 st.error(f"Pipeline failed: {exc}")
 
-    if st.button("🔄 Generate New Data", use_container_width=True):
+    if st.button("Generate New Data", icon="➕", use_container_width=True):
         with st.spinner("Generating synthetic airport data & running pipeline…"):
             try:
                 from simulator.airport_generator import generate_all_events, write_events_to_json
@@ -267,14 +319,11 @@ with st.sidebar:
     st.divider()
 
     # -- Auto Refresh --
-    st.markdown(
-        f"<h4 style='color:{_C_SKY_BLUE}'>🔄 Auto Refresh</h4>",
-        unsafe_allow_html=True,
-    )
+    st.markdown(_SIDEBAR_REFR_HDR, unsafe_allow_html=True)
     refresh_interval = st.slider(
         "Refresh interval (sec)", min_value=10, max_value=300, value=60, step=10
     )
-    if st.button("Start Auto Refresh", use_container_width=True):
+    if st.button("Start Auto Refresh", icon="⏱️", use_container_width=True):
         import time
         time.sleep(refresh_interval)
         st.cache_data.clear()
@@ -523,7 +572,7 @@ with alerts_col:
 # ── Footer ─────────────────────────────────────────────────────────────────
 st.markdown("---")
 st.markdown(
-    f"<p style='text-align:center;color:{_C_DARK_GRAY};font-size:0.8rem;'>"
+    f"<p style='text-align:center;color:{COLORS['dark_gray']};font-size:0.8rem;'>"
     f"AeroOps AI — Smart Airport IoT DataOps Platform</p>",
     unsafe_allow_html=True,
 )

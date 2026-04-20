@@ -42,7 +42,7 @@ def apply_theme(st) -> None:
             }}
             /* Sidebar */
             [data-testid="stSidebar"] {{
-                background-color: {COLORS["navy"]};
+                background: linear-gradient(180deg, #4682B4 0%, #2a4d7a 100%);
                 color: {COLORS["white"]};
             }}
             [data-testid="stSidebar"] .stMarkdown {{
@@ -50,11 +50,11 @@ def apply_theme(st) -> None:
             }}
             /* Sidebar nav page links */
             [data-testid="stSidebarNav"] {{
-                background-color: {COLORS["navy"]};
+                background: transparent;
             }}
             /* Logo area at top of sidebar */
             [data-testid="stSidebarHeader"] {{
-                background-color: {COLORS["navy"]};
+                background: transparent;
                 padding: 1rem 1rem 0.5rem 1rem;
             }}
             [data-testid="stSidebarHeader"] img {{
@@ -69,10 +69,10 @@ def apply_theme(st) -> None:
                 color: {COLORS["white"]} !important;
             }}
             [data-testid="stSidebarNavLink"]:hover {{
-                background-color: rgba(74, 144, 217, 0.25) !important;
+                background-color: rgba(255, 255, 255, 0.12) !important;
             }}
             [data-testid="stSidebarNavLink"][aria-selected="true"] {{
-                background-color: rgba(74, 144, 217, 0.4) !important;
+                background-color: rgba(255, 255, 255, 0.2) !important;
             }}
             /* All text elements inside sidebar */
             [data-testid="stSidebar"] p,
@@ -117,7 +117,7 @@ def apply_theme(st) -> None:
             .metric-card.critical {{ border-left-color: {COLORS["danger_red"]}; }}
             /* Page header */
             .page-header {{
-                background: linear-gradient(135deg, {COLORS["navy"]}, {COLORS["sky_blue"]});
+                background: linear-gradient(135deg, #2a4d7a, #4682B4);
                 color: {COLORS["white"]};
                 padding: 1.5rem 2rem;
                 border-radius: 10px;
