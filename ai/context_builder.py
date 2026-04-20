@@ -164,7 +164,9 @@ def _get_anomalies() -> dict:
     try:
         # Actual columns: run_timestamp, stage, stream, total_records, passed, failed, quality_score, duration_sec
         if "quality_score" in df.columns:
-            failures = df[df["quality_score"] < 1.0]
+            # Exclude gold stage — quality_score is always 0.0 there (aggregation, no validation)
+            silver_df = df[df["stage"] == "silver"] if "stage" in df.columns else df
+            failures = silver_df[silver_df["quality_score"] < 1.0]
             if not failures.empty:
                 for _, row in failures.head(10).iterrows():
                     entry = {
