@@ -202,7 +202,21 @@ with st.sidebar:
             except Exception as exc:
                 st.error(f"Data generation failed: {exc}")
 
+    st.divider()
 
+    # -- Auto Refresh --
+    st.markdown(
+        f"<h4 style='color:{_C_SKY_BLUE}'>🔄 Auto Refresh</h4>",
+        unsafe_allow_html=True,
+    )
+    refresh_interval = st.slider(
+        "Refresh interval (sec)", min_value=10, max_value=300, value=60, step=10
+    )
+    if st.button("Start Auto Refresh", use_container_width=True):
+        import time
+        time.sleep(refresh_interval)
+        st.cache_data.clear()
+        st.rerun()
 
 # ── Helper: determine status from quality score ──────────────────────────
 def _quality_status(score: float) -> str:

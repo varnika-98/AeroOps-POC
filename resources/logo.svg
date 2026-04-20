@@ -2,6 +2,6 @@
   <defs>
     <style>@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@700&amp;family=Inter&amp;display=swap');</style>
   </defs>
-  <text x="4" y="36" font-family="Rajdhani, Arial, sans-serif" font-size="34" font-weight="700" fill="#FFFFFF">✈️ AeroOps AI</text>
+  <text x="4" y="36" font-family="Rajdhani, Arial, sans-serif" font-size="34" font-weight="700" fill="#FFFFFF">&#9992; AeroOps AI</text>
   <text x="4" y="62" font-family="Inter, Arial, sans-serif" font-size="14" fill="#ECF0F1">Smart Airport IoT DataOps</text>
 </svg>
