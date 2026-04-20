@@ -145,7 +145,7 @@ with col_trend:
     if flight_kpis_df is not None and "hour" in flight_kpis_df.columns and "otp_pct" in flight_kpis_df.columns:
         fig_otp = time_series_chart(flight_kpis_df, "hour", "otp_pct", "On-Time Performance % by Hour")
         fig_otp.add_hline(y=80, line_dash="dash", line_color=COLORS["danger_red"], annotation_text="80% Target")
-        fig_otp.update_layout(height=350)
+        fig_otp.update_layout(height=350, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig_otp, use_container_width=True)
     else:
         st.info("Flight KPI data not available.")
@@ -169,7 +169,7 @@ with col_left:
         )
         fig_hist.update_layout(
             xaxis_title="Delay (minutes)", yaxis_title="Count",
-            plot_bgcolor=COLORS["white"], paper_bgcolor=COLORS["white"],
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             height=350,
         )
         st.plotly_chart(fig_hist, use_container_width=True)
@@ -181,19 +181,37 @@ with col_right:
     if flights_df is not None and "status" in flights_df.columns:
         status_counts = flights_df["status"].value_counts().reset_index()
         status_counts.columns = ["status", "count"]
-        fig_pie = px.pie(
-            status_counts, names="status", values="count",
-            title="Flight Status Distribution",
-            color_discrete_sequence=[
-                COLORS["sky_blue"], COLORS["success_green"], COLORS["safety_orange"],
-                COLORS["warning_yellow"], COLORS["danger_red"], COLORS["navy"],
-            ],
-        )
-        fig_pie.update_layout(
-            plot_bgcolor=COLORS["white"], paper_bgcolor=COLORS["white"],
+        sorted_status = status_counts.sort_values("count", ascending=True)
+        _palette = [
+            COLORS["sky_blue"], COLORS["success_green"], COLORS["safety_orange"],
+            COLORS["warning_yellow"], COLORS["danger_red"], COLORS["navy"],
+        ]
+        fig_lollipop = go.Figure()
+        for idx, (_, row) in enumerate(sorted_status.iterrows()):
+            color = _palette[idx % len(_palette)]
+            fig_lollipop.add_trace(go.Scatter(
+                x=[0, row["count"]], y=[row["status"], row["status"]],
+                mode="lines", line=dict(color=color, width=3),
+                showlegend=False, hoverinfo="skip",
+            ))
+            fig_lollipop.add_trace(go.Scatter(
+                x=[row["count"]], y=[row["status"]],
+                mode="markers+text", marker=dict(size=14, color=color),
+                text=[str(row["count"])], textposition="middle right",
+                textfont=dict(size=12, color=COLORS["navy"]),
+                showlegend=False,
+                hovertemplate=f"{row['status']}: {row['count']}<extra></extra>",
+            ))
+        fig_lollipop.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             height=350,
+            xaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)", zeroline=False),
+            yaxis=dict(showgrid=False),
+            title=dict(text="Flight Status Distribution", font=dict(size=16, color=COLORS["navy"])),
+            margin=dict(l=40, r=60, t=50, b=30),
+            font=dict(family="system-ui", color=COLORS["navy"]),
         )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_lollipop, use_container_width=True)
     else:
         st.info("Flight status data not available.")
 
@@ -218,8 +236,24 @@ with col_cp:
             .rename(columns={"wait_time_minutes": "avg_wait_min"})
             .sort_values("avg_wait_min", ascending=False)
         )
-        fig_wait = bar_chart(avg_wait, "checkpoint", "avg_wait_min", "Avg Wait Time per Checkpoint", color=COLORS["safety_orange"])
-        fig_wait.update_layout(height=350)
+        wait_colors = ["#4682B4"] * len(avg_wait)
+        fig_wait = go.Figure()
+        fig_wait.add_trace(go.Bar(
+            x=avg_wait["checkpoint"], y=avg_wait["avg_wait_min"],
+            marker_color=wait_colors, width=0.4,
+            text=[f"{v:.1f}" for v in avg_wait["avg_wait_min"]],
+            textposition="outside", textfont=dict(size=11, color=COLORS["navy"]),
+        ))
+        fig_wait.update_layout(
+            height=350,
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            margin=dict(l=40, r=20, t=40, b=40),
+            font=dict(family="system-ui", size=12, color=COLORS["navy"]),
+            title=dict(text="Avg Wait Time per Checkpoint", font=dict(size=14, color=COLORS["navy"])),
+            yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)", title="Wait (min)", range=[0, avg_wait["avg_wait_min"].max() * 1.5]),
+            xaxis=dict(showgrid=False),
+            bargap=0.35,
+        )
         st.plotly_chart(fig_wait, use_container_width=True)
     else:
         st.info("Passenger checkpoint data not available.")
@@ -231,8 +265,8 @@ with col_tp:
         tp_df["timestamp"] = pd.to_datetime(tp_df["timestamp"])
         tp_hourly = tp_df.set_index("timestamp").resample("h")["throughput_per_hour"].mean().reset_index()
         fig_tp = time_series_chart(tp_hourly, "timestamp", "throughput_per_hour", "Throughput per Hour", color=COLORS["success_green"])
-        fig_tp.add_hline(y=2000, line_dash="dash", line_color=COLORS["danger_red"], annotation_text="Capacity: 2000")
-        fig_tp.update_layout(height=350)
+        fig_tp.add_hline(y=300, line_dash="dash", line_color=COLORS["danger_red"], annotation_text="Capacity: 300")
+        fig_tp.update_layout(height=350, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         st.plotly_chart(fig_tp, use_container_width=True)
     else:
         st.info("Passenger throughput data not available.")
@@ -251,8 +285,25 @@ if cargo_df is not None and "status" in cargo_df.columns:
     labels = [s for s in stage_order if s in status_counts_cargo.index]
     values = [int(status_counts_cargo[s]) for s in labels]
     if labels:
-        fig_funnel = funnel_chart(labels, values, "Baggage Processing Pipeline")
-        fig_funnel.update_layout(height=350)
+        teal_colors = ["#0D3B66", "#14668A", "#1A8FA8", "#28B5C4"]
+        stage_colors = teal_colors[:len(labels)]
+        fig_funnel = go.Figure(go.Funnel(
+            y=labels, x=values,
+            marker=dict(
+                color=stage_colors,
+                line=dict(width=2, color="#ECF0F1"),
+            ),
+            textinfo="value+percent initial",
+            textfont=dict(size=14, color="white", family="system-ui"),
+            connector=dict(line=dict(color="rgba(255,255,255,0.3)", width=1)),
+        ))
+        fig_funnel.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            height=300,
+            font=dict(family="system-ui", color="white"),
+            margin=dict(l=10, r=10, t=10, b=10),
+            funnelgap=0.04,
+        )
         st.plotly_chart(fig_funnel, use_container_width=True)
     else:
         st.info("No matching baggage status stages found.")
