@@ -1,0 +1,232 @@
+name: CI — AeroOps POC
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Run flake8
+        run: |
+          flake8 app/ utils/ simulator/ ai/ pipeline/ \
+            --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run flake8 (warnings)
+        run: |
+          flake8 app/ utils/ simulator/ ai/ pipeline/ \
+            --count --max-line-length=120 --ignore=E501,W503,E302,E303,W291,W292,W293,E266,E265,E741,E711,E712,W504 \
+            --statistics || true
+
+  import-check:
+    name: Import Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Verify module imports
+        env:
+          ANTHROPIC_API_KEY: test-key-not-real
+        run: |
+          echo "--- utils ---"
+          python -c "from utils.theme import COLORS, apply_theme, metric_card, section_header"
+          python -c "from utils.charts import gauge_chart, time_series_chart, bar_chart, funnel_chart"
+          python -c "from utils.kpi_calculator import get_flight_kpis, get_passenger_kpis"
+          python -c "from utils.lineage import get_lineage_for_stream, get_sankey_data"
+
+          echo "--- simulator ---"
+          python -c "from simulator.airport_generator import generate_all_events, write_events_to_json"
+          python -c "from simulator.config import AIRPORT_CONFIG"
+          python -c "from simulator.failure_injector import inject_schema_drift, inject_sensor_outage"
+
+          echo "--- ai ---"
+          python -c "from ai.claude_client import ClaudeClient"
+          python -c "from ai.context_builder import build_ai_context, format_context_for_prompt"
+          python -c "from ai.prompts import SYSTEM_PROMPT"
+
+          echo "--- pipeline ---"
+          python -c "from pipeline.orchestrator import run_pipeline"
+          python -c "from pipeline.bronze_ingestion import ingest_to_bronze"
+          python -c "from pipeline.silver_transformation import transform_to_silver"
+          python -c "from pipeline.gold_aggregation import aggregate_to_gold"
+          python -c "from pipeline.quality_rules import validate_record"
+
+          echo "All imports OK"
+
+  smoke-test:
+    name: Smoke Test (Data Pipeline)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate simulated data
+        run: |
+          python -c "
+          from simulator.airport_generator import generate_all_events, write_events_to_json
+          events = generate_all_events(hours=1)
+          paths = write_events_to_json(events)
+          total = sum(len(v) for v in events.values())
+          print(f'Generated {total:,} events across {len(events)} streams')
+          "
+
+      - name: Run medallion pipeline
+        run: |
+          python -c "
+          from pipeline.orchestrator import run_pipeline
+          result = run_pipeline()
+          print(f'Pipeline completed: {result.get(\"total_streams\", \"?\")} streams')
+          "
+
+      - name: Verify parquet outputs
+        run: |
+          python -c "
+          import os, pandas as pd
+
+          expected = {
+              'silver': ['flights', 'passengers', 'cargo', 'environmental', 'runway', 'security'],
+              'gold': [],  # gold files are optional aggregations
+          }
+
+          errors = []
+          for layer in ['silver']:
+              layer_dir = f'data/{layer}'
+              if not os.path.isdir(layer_dir):
+                  errors.append(f'Missing directory: {layer_dir}')
+                  continue
+              files = [f for f in os.listdir(layer_dir) if f.endswith('.parquet')]
+              if not files:
+                  errors.append(f'No parquet files in {layer_dir}')
+                  continue
+              for f in files:
+                  path = os.path.join(layer_dir, f)
+                  df = pd.read_parquet(path)
+                  if len(df) == 0:
+                      errors.append(f'{layer}/{f} has 0 rows')
+                  else:
+                      print(f'  OK  {layer}/{f}: {len(df):,} rows, {len(df.columns)} cols')
+
+          if errors:
+              for e in errors:
+                  print(f'  FAIL  {e}')
+              raise SystemExit(1)
+          print('All parquet outputs verified')
+          "
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .env is gitignored
+        run: |
+          if ! grep -q "^\.env$" .gitignore; then
+            echo "FAIL: .env is not in .gitignore"
+            exit 1
+          fi
+          echo "OK: .env is gitignored"
+
+      - name: Scan for secret patterns
+        run: |
+          echo "Scanning for API key patterns..."
+          PATTERNS=(
+            "sk-ant-api"
+            "sk-proj-"
+            "AKIA[0-9A-Z]{16}"
+            "ghp_[a-zA-Z0-9]{36}"
+            "gho_[a-zA-Z0-9]{36}"
+          )
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            # Exclude .env.example placeholders, .git directory, and binary files
+            MATCHES=$(grep -r --include="*.py" --include="*.yml" --include="*.yaml" \
+                      --include="*.toml" --include="*.json" --include="*.md" \
+                      -l "$pattern" . 2>/dev/null | grep -v ".env.example" || true)
+            if [ -n "$MATCHES" ]; then
+              echo "FAIL: Pattern '$pattern' found in:"
+              echo "$MATCHES"
+              FOUND=1
+            fi
+          done
+          if [ $FOUND -eq 1 ]; then
+            echo "Secret patterns detected — fix before merging"
+            exit 1
+          fi
+          echo "OK: No secret patterns found"
+
+  dep-check:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          echo "All dependencies installed successfully on Python ${{ matrix.python-version }}"
+
+      - name: Verify key packages
+        run: |
+          python -c "
+          import streamlit, plotly, pandas, duckdb, pyarrow, anthropic, faker
+          print(f'streamlit={streamlit.__version__}')
+          print(f'plotly={plotly.__version__}')
+          print(f'pandas={pandas.__version__}')
+          print(f'duckdb={duckdb.__version__}')
+          print(f'pyarrow={pyarrow.__version__}')
+          print(f'anthropic={anthropic.__version__}')
+          print('All key packages verified')
+          "
