@@ -34,7 +34,7 @@ def _safe_read_parquet(path: str) -> pd.DataFrame | None:
 
 def _get_pipeline_health() -> dict:
     """Latest run results per stream from pipeline logs."""
-    df = _safe_read_parquet("data/logs/pipeline_runs.parquet")
+    df = _safe_read_parquet("data/logs/pipeline_logs.parquet")
     if df is None:
         return {"status": "no_data", "message": "Pipeline log data unavailable"}
 
@@ -149,7 +149,7 @@ def _get_quality_issues() -> dict:
 
 def _get_anomalies() -> dict:
     """Detected issues from logs."""
-    df = _safe_read_parquet("data/logs/pipeline_runs.parquet")
+    df = _safe_read_parquet("data/logs/pipeline_logs.parquet")
     if df is None:
         return {"status": "no_data"}
 
