@@ -2,7 +2,7 @@
 
 A Streamlit dashboard that monitors a smart airport's IoT sensor network through a **Bronze → Silver → Gold medallion pipeline** — visualizing flight operations, passenger flow, cargo processing, and environmental systems — with **Claude AI** providing grounded incident diagnosis and pipeline optimization recommendations.
 
-> **Inspired by** [Miracle Software Systems' airport case study](https://www.miraclesoft.com/) — IoT/Sensors data lake for a major international airport with 200+ destinations.
+> IoT/Sensors data lake for a major international airport with 200+ destinations.
 
 ---
 
@@ -42,12 +42,12 @@ IoT Sensor Network (6 Streams)
 
 | Page | Description |
 |------|-------------|
-| 🏠 **Command Center** | System health, event counts, alerts, medallion layer status |
-| ✈️ **Flight & Passenger** | OTP, passenger flow, checkpoint wait times, baggage funnel |
+| 🏠 **Command Center** | System health with SVG icon cards, grouped medallion layer bars, recent alerts |
+| 👥 **Passenger Analytics** | Passenger flow, checkpoint wait times, baggage funnel |
 | 🔧 **Pipeline Health** | ETL run history, success/failure trends, log viewer |
 | 📈 **KPI Metrics** | Data quality scores, schema validation, SLA compliance |
 | 🔗 **Data Lineage** | Bronze→Silver→Gold flow, impact analysis, governance |
-| 🤖 **AI Ops Center** | Claude-powered diagnosis, recommendations, chat |
+| 🤖 **AI Ops Center** | Claude Haiku 4.5 diagnosis with Ollama fallback, recommendations, chat |
 
 ---
 
@@ -61,8 +61,8 @@ IoT Sensor Network (6 Streams)
 
 ```bash
 # Clone the repository
-git clone https://github.com/varnikaprasad98/MiraclesPOC.git
-cd MiraclesPOC
+git clone https://github.com/varnika-98/AeroOps-POC.git
+cd AeroOps-POC
 
 # Create virtual environment
 python -m venv venv
@@ -80,7 +80,7 @@ copy .env.example .env
 python -m simulator.airport_generator
 
 # Run the dashboard
-streamlit run app/🏠_Command_Center.py
+streamlit run app/Command_Center.py
 ```
 
 ---
@@ -103,7 +103,7 @@ Injectable scenarios to demonstrate observability:
 | Visualizations | Plotly + Altair |
 | Data Processing | Pandas + DuckDB |
 | Storage | Parquet (Bronze/Silver/Gold) |
-| AI | Claude API (Anthropic SDK) |
+| AI | Claude Haiku 4.5 (Anthropic SDK) + Ollama fallback |
 | Deployment | Streamlit Community Cloud |
 
 ---
@@ -111,10 +111,15 @@ Injectable scenarios to demonstrate observability:
 ## 📁 Project Structure
 
 ```
-MiraclesPOC/
+AeroOps-POC/
 ├── app/                    # Streamlit dashboard
-│   ├── 🏠_Command_Center.py
-│   └── pages/              # Dashboard pages
+│   ├── Command_Center.py   # Main entry point
+│   └── pages/
+│       ├── 1_Passenger_Analytics.py
+│       ├── 2_Pipeline_Health.py
+│       ├── 3_KPI_Metrics.py
+│       ├── 4_Data_Lineage.py
+│       └── 5_AI_Ops_Center.py
 ├── simulator/              # IoT data & log generators
 ├── pipeline/               # Bronze → Silver → Gold ETL
 ├── ai/                     # Claude AI integration
@@ -128,8 +133,7 @@ MiraclesPOC/
 
 ## 👩‍💻 Author
 
-**Varnika Prasad** — Data Engineer / AI Engineer  
-Built as a POC for Miracle Software Systems interview process.
+**Varnika Prasad** — Data Engineer / AI Engineer
 
 ---
 
