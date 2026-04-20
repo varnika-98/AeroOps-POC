@@ -38,7 +38,7 @@ data/logs/
 Thumbs.db
 
 # Docs (internal reference only)
-docs/
+docs/personal/
 
 # Streamlit
 .streamlit/secrets.toml
