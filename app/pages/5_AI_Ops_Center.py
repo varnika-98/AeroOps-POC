@@ -10,9 +10,9 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
-from ai.claude_client import ClaudeClient
+from ai.claude_client import ClaudeClient, load_ai_metrics
 from ai.context_builder import build_ai_context, format_context_for_prompt
-from utils.theme import COLORS, STREAM_ICONS, SVG_ICONS, apply_theme, page_header, page_loader, section_header, inline_svg, stream_svg, status_svg
+from utils.theme import COLORS, STREAM_ICONS, SVG_ICONS, apply_theme, page_header, page_loader, section_header, inline_svg, stream_svg, status_svg, metric_card
 
 # ---------------------------------------------------------------------------
 # Page config & theme
@@ -133,6 +133,94 @@ if api_available:
     st.caption(f"🤖 AI Backend: **{_client_info._get_backend_label()}**")
 else:
     st.warning("⚠️ No LLM backend available. Start **Ollama** locally or set **ANTHROPIC_API_KEY** in `.env`.")
+
+# ---------------------------------------------------------------------------
+# 2b. AI Model Performance KPIs
+# ---------------------------------------------------------------------------
+import plotly.graph_objects as go
+from utils.kpi_calculator import get_ai_kpis
+
+ai_kpis = get_ai_kpis()
+if ai_kpis.get("status") != "no_data":
+    st.markdown("---")
+    st.markdown(section_header("AI Model Performance", "robot"), unsafe_allow_html=True)
+
+    kpi_c1, kpi_c2, kpi_c3, kpi_c4 = st.columns(4)
+    with kpi_c1:
+        st.markdown(metric_card("Total Requests", str(ai_kpis["total_requests"])), unsafe_allow_html=True)
+    with kpi_c2:
+        st.markdown(metric_card("Avg Latency", f"{ai_kpis['avg_latency_sec']:.2f}s",
+                                status="healthy" if ai_kpis["avg_latency_sec"] < 5 else "warning"), unsafe_allow_html=True)
+    with kpi_c3:
+        st.markdown(metric_card("Total Tokens", f"{ai_kpis['total_tokens']:,}"), unsafe_allow_html=True)
+    with kpi_c4:
+        st.markdown(metric_card("Total Cost", f"${ai_kpis['total_cost_usd']:.4f}"), unsafe_allow_html=True)
+
+    chart_c1, chart_c2 = st.columns(2)
+
+    # Latency trend from raw metrics
+    ai_metrics_raw = load_ai_metrics()
+    success_metrics = [m for m in ai_metrics_raw if m.get("status") == "success"]
+
+    with chart_c1:
+        if success_metrics:
+            import pandas as pd
+            latency_df = pd.DataFrame(success_metrics)
+            latency_df["timestamp"] = pd.to_datetime(latency_df["timestamp"])
+            fig_lat = go.Figure()
+            fig_lat.add_trace(go.Scatter(
+                x=latency_df["timestamp"], y=latency_df["latency_sec"],
+                mode="lines+markers", name="Latency",
+                line=dict(color="#4682B4", width=2),
+                marker=dict(size=6, color=[
+                    COLORS["success_green"] if l < 3 else (COLORS["warning_yellow"] if l < 6 else COLORS["danger_red"])
+                    for l in latency_df["latency_sec"]
+                ]),
+            ))
+            fig_lat.update_layout(
+                title=dict(text="Response Latency Trend", font=dict(size=14, color=COLORS["navy"])),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                height=300, margin=dict(l=40, r=20, t=40, b=40),
+                yaxis=dict(title="Seconds", showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
+                xaxis=dict(showgrid=False),
+                font=dict(family="system-ui", color=COLORS["navy"]),
+            )
+            st.plotly_chart(fig_lat, use_container_width=True)
+
+    with chart_c2:
+        by_type = ai_kpis.get("by_prompt_type", {})
+        if by_type:
+            types = list(by_type.keys())
+            tokens = [by_type[t]["tokens"] for t in types]
+            costs = [round(by_type[t]["cost"], 4) for t in types]
+            counts = [by_type[t]["count"] for t in types]
+
+            fig_usage = go.Figure()
+            fig_usage.add_trace(go.Bar(
+                x=types, y=tokens, name="Tokens",
+                marker_color=["#0D3B66", "#14668A", "#1A8FA8", "#28B5C4"][:len(types)],
+                text=[f"{t:,}" for t in tokens], textposition="outside",
+                textfont=dict(size=11, color=COLORS["navy"]),
+                width=0.5,
+            ))
+            fig_usage.update_layout(
+                title=dict(text="Token Usage by Prompt Type", font=dict(size=14, color=COLORS["navy"])),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                height=300, margin=dict(l=40, r=20, t=40, b=40),
+                yaxis=dict(title="Tokens", showgrid=True, gridcolor="rgba(0,0,0,0.06)",
+                           range=[0, max(tokens) * 1.3] if tokens else None),
+                xaxis=dict(showgrid=False),
+                font=dict(family="system-ui", color=COLORS["navy"]),
+                showlegend=False, bargap=0.35,
+            )
+            st.plotly_chart(fig_usage, use_container_width=True)
+
+    # Error rate + model info row
+    if ai_kpis["failed_requests"] > 0:
+        st.markdown(
+            f"⚠️ **Error rate: {ai_kpis['error_rate_pct']:.1f}%** "
+            f"({ai_kpis['failed_requests']} failed / {ai_kpis['total_requests']} total)"
+        )
 
 # ---------------------------------------------------------------------------
 # 3. System Status Summary — Generate Diagnosis
