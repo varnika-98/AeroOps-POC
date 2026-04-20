@@ -80,9 +80,9 @@ delay_status = "healthy" if avg_delay <= 10 else ("warning" if avg_delay <= 20 e
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.plotly_chart(
-        gauge_chart(otp_pct, "Flight OTP %", max_val=100, thresholds={"warning": 80, "critical": 60}),
-        use_container_width=True,
+    st.markdown(
+        metric_card("Flight OTP %", f"{otp_pct:.1f}%", status=otp_status),
+        unsafe_allow_html=True,
     )
 
 with col2:
@@ -101,20 +101,54 @@ with col4:
     )
 
 # ---------------------------------------------------------------------------
-# Flight OTP Trend
+# Flight OTP Section
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.markdown(section_header("Flight OTP Trend", "chart_up"), unsafe_allow_html=True)
 
 flight_kpis_df = load_flight_kpis()
-if flight_kpis_df is not None and "hour" in flight_kpis_df.columns and "otp_pct" in flight_kpis_df.columns:
-    fig_otp = time_series_chart(flight_kpis_df, "hour", "otp_pct", "On-Time Performance % by Hour")
-    fig_otp.add_hline(y=80, line_dash="dash", line_color=COLORS["danger_red"], annotation_text="80% Target")
-    fig_otp.update_layout(height=350)
-    st.plotly_chart(fig_otp, use_container_width=True)
-else:
-    st.info("Flight KPI data not available.")
+col_gauge, col_trend = st.columns([1, 2])
+
+with col_gauge:
+    st.markdown(section_header("On-Time Performance", "target"), unsafe_allow_html=True)
+    otp_bar_color = COLORS["success_green"] if otp_pct >= 80 else (COLORS["warning_yellow"] if otp_pct >= 60 else COLORS["danger_red"])
+    fig_gauge = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=otp_pct,
+        domain={"x": [0, 1], "y": [0, 1]},
+        title={"text": "Flight OTP %", "font": {"size": 14, "color": COLORS["navy"]}},
+        number={"font": {"size": 32, "color": COLORS["navy"]}, "suffix": "%"},
+        gauge={
+            "axis": {"range": [0, 100], "tickcolor": "#4682B4", "dtick": 20},
+            "bar": {"color": otp_bar_color},
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 2,
+            "bordercolor": "#4682B4",
+            "threshold": {
+                "line": {"color": COLORS["dark_gray"], "width": 2},
+                "thickness": 0.8,
+                "value": 80,
+            },
+        },
+    ))
+    fig_gauge.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font_family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        margin=dict(l=20, r=20, t=50, b=20),
+        height=350,
+    )
+    st.plotly_chart(fig_gauge, use_container_width=True)
+
+with col_trend:
+    st.markdown(section_header("Flight OTP Trend", "chart_up"), unsafe_allow_html=True)
+    if flight_kpis_df is not None and "hour" in flight_kpis_df.columns and "otp_pct" in flight_kpis_df.columns:
+        fig_otp = time_series_chart(flight_kpis_df, "hour", "otp_pct", "On-Time Performance % by Hour")
+        fig_otp.add_hline(y=80, line_dash="dash", line_color=COLORS["danger_red"], annotation_text="80% Target")
+        fig_otp.update_layout(height=350)
+        st.plotly_chart(fig_otp, use_container_width=True)
+    else:
+        st.info("Flight KPI data not available.")
 
 # ---------------------------------------------------------------------------
 # Delay Distribution & Flight Status Breakdown
