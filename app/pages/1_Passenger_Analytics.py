@@ -10,7 +10,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from utils.theme import COLORS, apply_theme, metric_card, page_header
+from utils.theme import COLORS, apply_theme, metric_card, page_header, page_loader
 from utils.charts import gauge_chart, time_series_chart, bar_chart, funnel_chart
 from utils.kpi_calculator import get_flight_kpis, get_passenger_kpis
 
@@ -59,6 +59,7 @@ def load_cargo():
 
 st.set_page_config(page_title="Passenger Analytics", page_icon="✈️", layout="wide")
 apply_theme(st)
+st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
 st.markdown(page_header("Passenger Analytics", "✈️"), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from utils.theme import COLORS, apply_theme, metric_card, page_header
+from utils.theme import COLORS, apply_theme, metric_card, page_header, page_loader
 from utils.charts import stacked_bar_chart, time_series_chart
 from utils.kpi_calculator import get_pipeline_health
 
@@ -43,6 +43,7 @@ def load_pipeline_kpis():
 
 st.set_page_config(page_title="Pipeline Health & Logs", page_icon="🔧", layout="wide")
 apply_theme(st)
+st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
 st.markdown(page_header("Pipeline Health & Logs", "🔧"), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
@@ -53,11 +54,19 @@ logs_df = load_pipeline_logs()
 pipeline_kpis_df = load_pipeline_kpis()
 
 if logs_df is not None:
+    # Derive run_id from timestamp (each unique timestamp = one pipeline run)
+    logs_df["run_timestamp"] = pd.to_datetime(logs_df["run_timestamp"])
+    logs_df["run_id"] = logs_df["run_timestamp"].dt.strftime("%Y%m%d_%H%M%S")
+    # Derive status: quality_score == 1.0 → success, else partial
+    logs_df["status"] = logs_df["quality_score"].apply(lambda q: "success" if q >= 1.0 else "partial")
+
     total_runs = logs_df["run_id"].nunique()
-    success_runs = logs_df[logs_df["status"] == "success"]["run_id"].nunique()
+    success_runs = logs_df[
+        (logs_df["stage"] == "gold") | (logs_df["status"] == "success")
+    ]["run_id"].nunique() if "stage" in logs_df.columns else total_runs
     success_rate = round(success_runs / total_runs * 100, 1) if total_runs > 0 else 0
     avg_duration = round(logs_df["duration_sec"].mean(), 1) if "duration_sec" in logs_df.columns else 0
-    total_records = int(logs_df["records_in"].sum()) if "records_in" in logs_df.columns else 0
+    total_records = int(logs_df["total_records"].sum()) if "total_records" in logs_df.columns else 0
 else:
     total_runs = success_rate = avg_duration = total_records = 0
 
@@ -91,9 +100,9 @@ with col4:
 st.markdown("---")
 st.subheader("🗓️ Pipeline Run Timeline")
 
-if logs_df is not None and all(c in logs_df.columns for c in ["timestamp", "duration_sec", "stream", "status"]):
+if logs_df is not None and all(c in logs_df.columns for c in ["run_timestamp", "duration_sec", "stream", "status"]):
     timeline_df = logs_df.copy()
-    timeline_df["Start"] = pd.to_datetime(timeline_df["timestamp"])
+    timeline_df["Start"] = pd.to_datetime(timeline_df["run_timestamp"])
     timeline_df["Finish"] = timeline_df["Start"] + pd.to_timedelta(timeline_df["duration_sec"], unit="s")
     timeline_df["Stream"] = timeline_df["stream"]
     timeline_df["Status"] = timeline_df["status"]
@@ -122,10 +131,10 @@ col_left, col_right = st.columns(2)
 
 with col_left:
     st.subheader("📈 Success / Failure Trend")
-    if logs_df is not None and "timestamp" in logs_df.columns and "status" in logs_df.columns:
+    if logs_df is not None and "run_timestamp" in logs_df.columns and "status" in logs_df.columns:
         trend_df = logs_df.copy()
-        trend_df["timestamp"] = pd.to_datetime(trend_df["timestamp"])
-        trend_df["hour"] = trend_df["timestamp"].dt.floor("h")
+        trend_df["run_timestamp"] = pd.to_datetime(trend_df["run_timestamp"])
+        trend_df["hour"] = trend_df["run_timestamp"].dt.floor("h")
         pivot = trend_df.groupby(["hour", "status"]).size().unstack(fill_value=0).reset_index()
         status_cols = [c for c in pivot.columns if c != "hour"]
         if status_cols:
@@ -170,12 +179,12 @@ with col_right:
 st.markdown("---")
 st.subheader("🚀 Throughput per Stream")
 
-if logs_df is not None and all(c in logs_df.columns for c in ["timestamp", "stream", "records_in"]):
+if logs_df is not None and all(c in logs_df.columns for c in ["run_timestamp", "stream", "total_records"]):
     tp_df = logs_df.copy()
-    tp_df["timestamp"] = pd.to_datetime(tp_df["timestamp"])
+    tp_df["run_timestamp"] = pd.to_datetime(tp_df["run_timestamp"])
     fig_tp = px.line(
-        tp_df, x="timestamp", y="records_in", color="stream",
-        title="Records In per Stream Over Time",
+        tp_df, x="run_timestamp", y="total_records", color="stream",
+        title="Records per Stream Over Time",
         markers=True,
     )
     fig_tp.update_layout(
@@ -195,8 +204,8 @@ st.subheader("📋 Pipeline Log Viewer")
 
 if logs_df is not None:
     display_cols = [
-        "run_id", "timestamp", "stage", "stream", "status",
-        "records_in", "records_out", "duration_sec", "error_message",
+        "run_id", "run_timestamp", "stage", "stream", "status",
+        "total_records", "passed", "failed", "quality_score", "duration_sec",
     ]
     display_cols = [c for c in display_cols if c in logs_df.columns]
     viewer_df = logs_df[display_cols].copy()

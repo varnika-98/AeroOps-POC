@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header
+from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header, page_loader
 from utils.charts import sankey_chart
 from utils.lineage import LINEAGE_MODEL, get_lineage_for_stream, get_impact_analysis, get_reverse_lineage, get_sankey_data
 from pipeline.quality_rules import QUALITY_RULES
@@ -22,6 +22,7 @@ from pipeline.quality_rules import QUALITY_RULES
 # Theme
 # ---------------------------------------------------------------------------
 apply_theme(st)
+st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Constants

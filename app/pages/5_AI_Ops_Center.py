@@ -6,13 +6,14 @@ import streamlit as st
 
 from ai.claude_client import ClaudeClient
 from ai.context_builder import build_ai_context, format_context_for_prompt
-from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header
+from utils.theme import COLORS, STREAM_ICONS, apply_theme, page_header, page_loader
 
 # ---------------------------------------------------------------------------
 # Page config & theme
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="AI Ops Center | AeroOps AI", page_icon="🤖", layout="wide")
 apply_theme(st)
+st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
 st.markdown(page_header("AI Ops Center", "🤖"), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
