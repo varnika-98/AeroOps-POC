@@ -187,7 +187,7 @@ jobs:
             # Exclude .env.example placeholders, .git directory, and binary files
             MATCHES=$(grep -r --include="*.py" --include="*.yml" --include="*.yaml" \
                       --include="*.toml" --include="*.json" --include="*.md" \
-                      -l "$pattern" . 2>/dev/null | grep -v ".env.example" || true)
+                      -l "$pattern" . 2>/dev/null | grep -v ".env.example" | grep -v ".github/workflows/ci.yml" || true)
             if [ -n "$MATCHES" ]; then
               echo "FAIL: Pattern '$pattern' found in:"
               echo "$MATCHES"
