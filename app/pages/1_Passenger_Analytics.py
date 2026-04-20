@@ -10,7 +10,7 @@ import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from utils.theme import COLORS, apply_theme, metric_card, page_header, page_loader
+from utils.theme import COLORS, SVG_ICONS, apply_theme, metric_card, page_header, page_loader, section_header
 from utils.charts import gauge_chart, time_series_chart, bar_chart, funnel_chart
 from utils.kpi_calculator import get_flight_kpis, get_passenger_kpis
 
@@ -60,7 +60,7 @@ def load_cargo():
 st.set_page_config(page_title="Passenger Analytics", page_icon="✈️", layout="wide")
 apply_theme(st)
 st.markdown(page_loader(duration=0.5), unsafe_allow_html=True)
-st.markdown(page_header("Passenger Analytics", "✈️"), unsafe_allow_html=True)
+st.markdown(page_header("Passenger Analytics", SVG_ICONS["flights"]), unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Top metrics row
@@ -105,7 +105,7 @@ with col4:
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.subheader("📈 Flight OTP Trend")
+st.markdown(section_header("Flight OTP Trend", "chart_up"), unsafe_allow_html=True)
 
 flight_kpis_df = load_flight_kpis()
 if flight_kpis_df is not None and "hour" in flight_kpis_df.columns and "otp_pct" in flight_kpis_df.columns:
@@ -126,7 +126,7 @@ col_left, col_right = st.columns(2)
 flights_df = load_flights()
 
 with col_left:
-    st.subheader("📊 Delay Distribution")
+    st.markdown(section_header("Delay Distribution", "bar_chart"), unsafe_allow_html=True)
     if flights_df is not None and "delay_minutes" in flights_df.columns:
         fig_hist = px.histogram(
             flights_df, x="delay_minutes", nbins=40,
@@ -143,7 +143,7 @@ with col_left:
         st.info("Flight delay data not available.")
 
 with col_right:
-    st.subheader("🎯 Flight Status Breakdown")
+    st.markdown(section_header("Flight Status Breakdown", "target"), unsafe_allow_html=True)
     if flights_df is not None and "status" in flights_df.columns:
         status_counts = flights_df["status"].value_counts().reset_index()
         status_counts.columns = ["status", "count"]
@@ -168,7 +168,7 @@ with col_right:
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.subheader("👥 Passenger Flow")
+st.markdown(section_header("Passenger Flow", "passengers"), unsafe_allow_html=True)
 
 passengers_df = load_passengers()
 
@@ -208,7 +208,7 @@ with col_tp:
 # ---------------------------------------------------------------------------
 
 st.markdown("---")
-st.subheader("📦 Baggage Processing Funnel")
+st.markdown(section_header("Baggage Processing Funnel", "cargo"), unsafe_allow_html=True)
 
 cargo_df = load_cargo()
 if cargo_df is not None and "status" in cargo_df.columns:

@@ -20,7 +20,7 @@ STATUS_COLORS = {
     "critical": COLORS["danger_red"],
 }
 
-# Stream icons
+# Stream icons (emoji fallback)
 STREAM_ICONS = {
     "flights": "✈️",
     "passengers": "👥",
@@ -29,6 +29,301 @@ STREAM_ICONS = {
     "runway": "🛬",
     "security": "🔒",
 }
+
+_N = COLORS["navy"]
+
+# SVG icon library — reusable across all pages
+SVG_ICONS = {
+    # ── Stream icons (24×24, navy stroke) ──
+    "flights": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M17.8 19.2L16 11l3.5-3.5C20.3 6.7 21 5.4 21 4.5c0-.6-.2-.9-.3-1'
+        '-.1-.1-.4-.3-1-.3-.9 0-2.2.7-3 1.5L13 8.2 5 6.4a.5.5 0 0 0-.5.2l-1 1.3'
+        'a.5.5 0 0 0 .1.6L9 12l-2 2.5H4.5a.5.5 0 0 0-.4.2l-1 1.3a.5.5 0 0 0 '
+        '.1.6l3 1.5 1.5 3a.5.5 0 0 0 .6.1l1.3-1a.5.5 0 0 0 .2-.4V17.5l2.5-2 '
+        '3.5 5.4a.5.5 0 0 0 .6.1l1.3-1a.5.5 0 0 0 .2-.5z"/></svg>'
+    ),
+    "passengers": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>'
+        '<circle cx="19" cy="7" r="3"/><path d="M22 21v-1.5a3 3 0 0 0-2.5-2.96"/></svg>'
+    ),
+    "cargo": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<rect x="3" y="7" width="18" height="13" rx="2"/>'
+        '<path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
+        '<path d="M12 12v4"/><path d="M3 12h18"/></svg>'
+    ),
+    "environmental": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M12 9a4 4 0 0 0-2 7.5"/><path d="M12 3v2"/>'
+        '<path d="M6.6 18.4l-1.4 1.4"/><path d="M20 12h-2"/>'
+        '<path d="M6 12H4"/><path d="M12 5a7 7 0 0 1 7 7c0 3-2 5.4-4 6.5"/>'
+        '<line x1="12" y1="12" x2="12" y2="21"/></svg>'
+    ),
+    "runway": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<rect x="4" y="3" width="16" height="18" rx="1"/>'
+        '<line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="10" x2="12" y2="12"/>'
+        '<line x1="12" y1="14" x2="12" y2="16"/><line x1="12" y1="18" x2="12" y2="20"/></svg>'
+    ),
+    "security": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+        '<path d="M9 12l2 2 4-4"/></svg>'
+    ),
+    # ── Section header icons ──
+    "chart_up": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
+    ),
+    "bar_chart": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<rect x="3" y="12" width="4" height="9" rx="1"/>'
+        '<rect x="10" y="7" width="4" height="14" rx="1"/>'
+        '<rect x="17" y="3" width="4" height="18" rx="1"/></svg>'
+    ),
+    "target": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/>'
+        '<circle cx="12" cy="12" r="2"/></svg>'
+    ),
+    "wrench": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77'
+        'a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91'
+        'a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'
+    ),
+    "calendar": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<rect x="3" y="4" width="18" height="18" rx="2"/>'
+        '<line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>'
+        '<line x1="3" y1="10" x2="21" y2="10"/></svg>'
+    ),
+    "clock": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<circle cx="12" cy="12" r="10"/>'
+        '<polyline points="12 6 12 12 16 14"/></svg>'
+    ),
+    "rocket": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91'
+        'a2.18 2.18 0 0 0-2.91-.09z"/>'
+        '<path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 '
+        '7.5-6 11a22.35 22.35 0 0 1-4 2z"/>'
+        '<path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>'
+        '<path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>'
+    ),
+    "clipboard": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6'
+        'a2 2 0 0 1 2-2h2"/>'
+        '<rect x="8" y="2" width="8" height="4" rx="1"/></svg>'
+    ),
+    "link": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>'
+        '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+    ),
+    "sankey": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M2 6c4 0 4 6 8 6s4-6 8-6"/>'
+        '<path d="M2 12c4 0 4 6 8 6s4-6 8-6"/>'
+        '<path d="M2 18c4 0 4 6 8 6s4-6 8-6"/></svg>'
+    ),
+    "impact": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+    ),
+    "rules": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M9 11l3 3L22 4"/>'
+        '<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
+    ),
+    "quarantine": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+        '<line x1="12" y1="8" x2="12" y2="12"/>'
+        '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    ),
+    "reverse": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<polyline points="1 4 1 10 7 10"/>'
+        '<path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>'
+    ),
+    "tags": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59'
+        'a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
+    ),
+    "stethoscope": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4'
+        'a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/>'
+        '<path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/>'
+        '<circle cx="20" cy="10" r="2"/></svg>'
+    ),
+    "search": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+    ),
+    "lightbulb": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M9 18h6"/><path d="M10 22h4"/>'
+        '<path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8'
+        'c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5"/></svg>'
+    ),
+    "alert_circle": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<circle cx="12" cy="12" r="10"/>'
+        '<line x1="12" y1="8" x2="12" y2="12"/>'
+        '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    ),
+    "chat": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'
+    ),
+    "file_text": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>'
+        '<polyline points="14 2 14 8 20 8"/>'
+        '<line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+    ),
+    "check": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<polyline points="20 6 9 17 4 12"/></svg>'
+    ),
+    "robot": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<rect x="3" y="11" width="18" height="10" rx="2"/>'
+        '<circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="11"/>'
+        '<line x1="8" y1="16" x2="8" y2="16.01"/>'
+        '<line x1="16" y1="16" x2="16" y2="16.01"/></svg>'
+    ),
+    "gauge": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/>'
+        '<path d="M12 6v6l4 2"/></svg>'
+    ),
+    "validate": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>'
+        '<polyline points="22 4 12 14.01 9 11.01"/></svg>'
+    ),
+    "leaf": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 '
+        '0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>'
+    ),
+    "table": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<rect x="3" y="3" width="18" height="18" rx="2"/>'
+        '<line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/>'
+        '<line x1="9" y1="3" x2="9" y2="21"/></svg>'
+    ),
+    "freshness": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" style="vertical-align:middle">'
+        '<path d="M21.5 2v6h-6"/>'
+        '<path d="M2 12a10 10 0 0 1 18.8-4.3L21.5 8"/>'
+        '<path d="M2.5 22v-6h6"/>'
+        '<path d="M22 12a10 10 0 0 1-18.8 4.2L2.5 16"/></svg>'
+    ),
+}
+
+# Small colored status SVGs (16×16, for inline use in markdown)
+_SVG_STATUS = {
+    "healthy": f'<svg width="16" height="16" viewBox="0 0 24 24" fill="{COLORS["success_green"]}" stroke="{COLORS["success_green"]}" stroke-width="2" style="vertical-align:middle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    "warning": f'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{COLORS["warning_yellow"]}" stroke-width="2" style="vertical-align:middle"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    "critical": f'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{COLORS["danger_red"]}" stroke-width="2" style="vertical-align:middle"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    "high": f'<svg width="16" height="16" viewBox="0 0 24 24" fill="{COLORS["danger_red"]}" stroke="none" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/></svg>',
+    "medium": f'<svg width="16" height="16" viewBox="0 0 24 24" fill="{COLORS["warning_yellow"]}" stroke="none" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/></svg>',
+    "low": f'<svg width="16" height="16" viewBox="0 0 24 24" fill="{COLORS["success_green"]}" stroke="none" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/></svg>',
+}
+
+
+def inline_svg(icon_key: str, size: int = 18) -> str:
+    """Return an SVG icon resized for inline use in markdown text.
+
+    Args:
+        icon_key: Key into SVG_ICONS dict.
+        size: Pixel size (width & height).
+    """
+    svg = SVG_ICONS.get(icon_key, "")
+    if svg:
+        svg = svg.replace('width="24"', f'width="{size}"', 1)
+        svg = svg.replace('height="24"', f'height="{size}"', 1)
+    return svg
+
+
+def status_svg(level: str) -> str:
+    """Return a small colored SVG for status/severity levels.
+
+    Args:
+        level: One of 'healthy', 'warning', 'critical', 'high', 'medium', 'low'.
+    """
+    return _SVG_STATUS.get(level, "")
+
+
+def stream_svg(stream: str, size: int = 18) -> str:
+    """Return an inline SVG for a stream name.
+
+    Falls back to the emoji STREAM_ICONS if no SVG exists.
+
+    Args:
+        stream: Stream name (e.g. 'flights', 'passengers').
+        size: Pixel size.
+    """
+    if stream in SVG_ICONS:
+        return inline_svg(stream, size)
+    return STREAM_ICONS.get(stream, "📊")
+
+
+def section_header(title: str, icon_key: str) -> str:
+    """Return HTML for a styled section header with SVG icon.
+
+    Args:
+        title: Section title text.
+        icon_key: Key into SVG_ICONS dict.
+    """
+    svg = SVG_ICONS.get(icon_key, "")
+    return (
+        f'{svg} &nbsp; <span style="font-size:1.3rem;font-weight:700;'
+        f'color:{COLORS["navy"]}">{title}</span>'
+    )
 
 
 def apply_theme(st) -> None:
@@ -126,6 +421,89 @@ def apply_theme(st) -> None:
             .page-header h1 {{
                 color: {COLORS["white"]};
                 margin: 0;
+            }}
+            /* ── Chat input ── */
+            [data-testid="stChatInput"] {{
+                border-radius: 24px !important;
+                overflow: hidden;
+                position: relative !important;
+            }}
+            [data-testid="stChatInput"] > div {{
+                border-radius: 24px !important;
+                border: 2px solid #4682B4 !important;
+                background: {COLORS["white"]} !important;
+                box-shadow: 0 2px 8px rgba(70, 130, 180, 0.15) !important;
+            }}
+            [data-testid="stChatInput"] textarea,
+            [data-testid="stChatInput"] input {{
+                color: {COLORS["dark_gray"]} !important;
+                background: transparent !important;
+                font-size: 0.95rem !important;
+                caret-color: {COLORS["navy"]} !important;
+            }}
+            [data-testid="stChatInput"] textarea::placeholder,
+            [data-testid="stChatInput"] input::placeholder {{
+                color: #888 !important;
+            }}
+            /* Chat message bubbles */
+            [data-testid="stChatMessage"] {{
+                border-radius: 12px !important;
+                margin-bottom: 0.5rem !important;
+                background: {COLORS["white"]} !important;
+                border: 1px solid rgba(70, 130, 180, 0.12) !important;
+            }}
+            /* ── Expander headers ── */
+            .stExpander > details > summary {{
+                color: {COLORS["navy"]} !important;
+                font-weight: 600 !important;
+            }}
+            /* ── Selectbox / dropdown / multiselect inputs ── */
+            [data-testid="stSelectbox"] > div > div,
+            [data-testid="stMultiSelect"] > div > div {{
+                border: 1.5px solid #4682B4 !important;
+                border-radius: 8px !important;
+                background: {COLORS["white"]} !important;
+                color: {COLORS["dark_gray"]} !important;
+            }}
+            [data-testid="stSelectbox"] [data-testid="stMarkdownContainer"],
+            [data-testid="stMultiSelect"] [data-testid="stMarkdownContainer"] {{
+                color: {COLORS["navy"]} !important;
+                font-weight: 600 !important;
+            }}
+            /* ── Dataframe / table containers ── */
+            [data-testid="stDataFrame"] {{
+                border: 1px solid rgba(70, 130, 180, 0.15) !important;
+                border-radius: 8px !important;
+                overflow: hidden;
+            }}
+            /* ── Buttons (non-sidebar) ── */
+            .stButton > button {{
+                border-radius: 8px !important;
+                border: 1.5px solid #4682B4 !important;
+                color: {COLORS["navy"]} !important;
+                font-weight: 600 !important;
+                transition: all 0.2s ease !important;
+            }}
+            .stButton > button:hover {{
+                background: linear-gradient(135deg, #4682B4, #2a4d7a) !important;
+                color: {COLORS["white"]} !important;
+            }}
+            /* ── Tabs ── */
+            .stTabs [data-baseweb="tab"] {{
+                color: {COLORS["navy"]} !important;
+                font-weight: 600 !important;
+            }}
+            .stTabs [aria-selected="true"] {{
+                border-bottom-color: #4682B4 !important;
+            }}
+            /* ── Divider ── */
+            [data-testid="stHorizontalBlock"] hr,
+            .stDivider > hr {{
+                border-color: rgba(70, 130, 180, 0.15) !important;
+            }}
+            /* ── Subheader styling ── */
+            .stMarkdown h2, .stMarkdown h3 {{
+                color: {COLORS["navy"]} !important;
             }}
         </style>
         """,
