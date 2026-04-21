@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 # ---------------------------------------------------------------------------
@@ -80,14 +81,57 @@ st.markdown(page_header("Data Lineage & Governance", SVG_ICONS["link"]), unsafe_
 # ---------- 1. Lineage Flow Diagram (Sankey) ----------
 st.markdown(section_header("Data Lineage Flow — Bronze → Silver → Gold", "sankey"), unsafe_allow_html=True)
 
+_BRONZE_COLOR = "#cd7f32"
+_SILVER_COLOR = "#8a9bae"
+_GOLD_COLOR = "#d4af37"
+_SANKEY_FONT = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif"
+
+
+def _sankey_node_colors(labels: list[str]) -> list[str]:
+    colors = []
+    for lbl in labels:
+        if lbl.startswith("Bronze"):
+            colors.append(_BRONZE_COLOR)
+        elif lbl.startswith("Silver"):
+            colors.append(_SILVER_COLOR)
+        elif lbl.startswith("Gold"):
+            colors.append(_GOLD_COLOR)
+        else:
+            colors.append("#4682B4")
+    return colors
+
+
+def _sankey_link_colors(sources: list[int], labels: list[str]) -> list[str]:
+    nc = _sankey_node_colors(labels)
+    colors = []
+    for s in sources:
+        base = nc[s]
+        r, g, b = int(base[1:3], 16), int(base[3:5], 16), int(base[5:7], 16)
+        colors.append(f"rgba({r},{g},{b},0.35)")
+    return colors
+
+
 sankey_data = get_sankey_data()
 if sankey_data and sankey_data.get("labels"):
-    fig = sankey_chart(
-        sources=sankey_data["sources"],
-        targets=sankey_data["targets"],
-        values=sankey_data["values"],
-        labels=sankey_data["labels"],
-        title="End-to-End Data Lineage (all streams)",
+    _labels = [lbl.split(": ")[0] + ": " + lbl.split(": ", 1)[1].replace("_", " ").title()
+               if ": " in lbl else lbl for lbl in sankey_data["labels"]]
+    _sources = sankey_data["sources"]
+    fig = go.Figure(go.Sankey(
+        textfont=dict(family=_SANKEY_FONT, size=14, color=COLORS["navy"]),
+        node=dict(pad=25, thickness=25, label=_labels,
+                  color=_sankey_node_colors(_labels),
+                  line=dict(color=COLORS["navy"], width=0.5)),
+        link=dict(source=_sources,
+                  target=sankey_data["targets"],
+                  value=sankey_data["values"],
+                  color=_sankey_link_colors(_sources, _labels)),
+    ))
+    fig.update_layout(
+        title=dict(text="End-to-End Data Lineage (all streams)",
+                   font=dict(size=18, color=COLORS["navy"], family=_SANKEY_FONT)),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        height=500, font=dict(family=_SANKEY_FONT, size=14, color=COLORS["navy"]),
+        margin=dict(l=40, r=40, t=60, b=40),
     )
     st.plotly_chart(fig, use_container_width=True)
 else:
@@ -143,10 +187,12 @@ else:
 # ---------- 3. Quality Rules Table ----------
 st.markdown(section_header("Quality Rules Catalogue", "rules"), unsafe_allow_html=True)
 
+import json as _json
+
 rules_rows: list[dict] = []
 quarantine_failed_rules: set[str] = set()
 
-# Collect failing rules from quarantine data
+# Collect failing rules from quarantine data (reasons may be JSON strings)
 for stream in STREAMS:
     qf = load_parquet(str(QUARANTINE_DIR / f"{stream}_quarantine.parquet"))
     if qf is not None and "_quarantine_reasons" in qf.columns:
@@ -155,6 +201,11 @@ for stream in STREAMS:
             for r in reasons:
                 if isinstance(r, list):
                     quarantine_failed_rules.update(r)
+                elif isinstance(r, str) and r.startswith("["):
+                    try:
+                        quarantine_failed_rules.update(_json.loads(r))
+                    except (ValueError, TypeError):
+                        quarantine_failed_rules.add(r)
                 else:
                     quarantine_failed_rules.add(str(r))
 
@@ -175,7 +226,7 @@ for stream, rules in QUALITY_RULES.items():
         else:
             criteria = str(rule_type)
 
-        status = "❌ Failing" if rule_name in quarantine_failed_rules else "✅ Passing"
+        status = "🔴 Failing" if rule_name in quarantine_failed_rules else "🟢 Passing"
 
         rules_rows.append({
             "Stream": stream.title(),
@@ -204,6 +255,23 @@ inspect_stream = st.selectbox(
 qfile = QUARANTINE_DIR / f"{inspect_stream}_quarantine.parquet"
 qdf = load_parquet(str(qfile))
 
+_REASON_LABELS = {
+    "wait_time_range": "Wait Time Out of Range",
+    "checkpoint_not_null": "Checkpoint Not Null",
+    "wind_speed_range": "Wind Speed Out of Range",
+    "flight_id_format": "Invalid Flight ID",
+    "status_enum": "Invalid Status Value",
+    "delay_non_negative": "Negative Delay",
+    "temperature_range": "Temperature Out of Range",
+    "humidity_range": "Humidity Out of Range",
+    "co2_range": "CO₂ Out of Range",
+    "aqi_range": "AQI Out of Range",
+    "visibility_range": "Visibility Out of Range",
+    "friction_range": "Friction Out of Range",
+    "severity_enum": "Invalid Severity",
+    "response_time_non_negative": "Negative Response Time",
+}
+
 if qdf is not None and not qdf.empty:
     st.metric("Quarantined Records", len(qdf))
 
@@ -211,16 +279,48 @@ if qdf is not None and not qdf.empty:
     if reason_col in qdf.columns:
         reasons = qdf[reason_col].dropna()
         if not reasons.empty:
-            exploded = reasons.explode() if reasons.apply(lambda x: isinstance(x, list)).any() else reasons
+            # Parse JSON strings into lists before exploding
+            def _parse_reason(val):
+                if isinstance(val, list):
+                    return val
+                if isinstance(val, str) and val.startswith("["):
+                    try:
+                        return _json.loads(val)
+                    except (ValueError, TypeError):
+                        pass
+                return [val]
+            parsed = reasons.apply(_parse_reason).explode()
+            parsed = parsed.map(lambda r: _REASON_LABELS.get(r, r.replace("_", " ").title()))
             st.markdown("**Failure reason summary:**")
-            st.dataframe(
-                exploded.value_counts().reset_index().rename(columns={"index": "Reason", reason_col: "Reason", "count": "Count", 0: "Count"}),
-                use_container_width=True,
-                hide_index=True,
-            )
+            reason_counts = parsed.value_counts().reset_index()
+            reason_counts.columns = ["Reason", "Count"]
+            st.dataframe(reason_counts, use_container_width=True, hide_index=True)
 
     with st.expander(f"View quarantined records for {inspect_stream}", expanded=False):
-        st.dataframe(qdf, use_container_width=True, hide_index=True)
+        display_qdf = qdf.copy()
+        # Rename columns to human-readable labels
+        _COL_LABELS = {
+            "event_id": "Event ID",
+            "timestamp": "Timestamp",
+            "terminal": "Terminal",
+            "checkpoint": "Checkpoint",
+            "zone": "Zone",
+            "passenger_count": "Passenger Count",
+            "wait_time_minutes": "Wait Time (min)",
+            "throughput_per_hour": "Throughput/hr",
+            "queue_length": "Queue Length",
+            "_quarantine_reasons": "Quarantine Reasons",
+            "runway_id": "Runway ID",
+            "surface_temp_c": "Surface Temp (°C)",
+            "wind_speed_kph": "Wind Speed (kph)",
+            "wind_direction_deg": "Wind Direction (°)",
+            "visibility_m": "Visibility (m)",
+            "friction_index": "Friction Index",
+            "precipitation": "Precipitation",
+            "runway_status": "Runway Status",
+        }
+        display_qdf = display_qdf.rename(columns={c: _COL_LABELS.get(c, c.replace("_", " ").title()) for c in display_qdf.columns})
+        st.dataframe(display_qdf, use_container_width=True, hide_index=True)
 else:
     st.success(f"No quarantine records for **{inspect_stream}** — all records passed! ✅")
 
