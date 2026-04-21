@@ -43,6 +43,9 @@ Thumbs.db
 # UI issue screenshots
 screenshots/
 
+# Personal docs (local only)
+resources/docs/personal/
+
 # Streamlit
 .streamlit/secrets.toml
 demo.py
