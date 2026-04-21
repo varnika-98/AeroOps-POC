@@ -1,6 +1,6 @@
 # AeroOps AI — Smart Airport IoT DataOps Dashboard
 
-**Duration:** June 2025 (POC — Interview Project for Miracle Software Systems)
+**Duration:** 2025 (POC — Data Engineering / AI Portfolio Project)
 **Type:** IoT / Data Engineering / AI / Dashboard Project
 **Tech Stack:** Streamlit, Plotly, Pandas, DuckDB, Parquet, Claude API (Anthropic SDK)
 
@@ -10,9 +10,9 @@
 
 **What:** A Streamlit dashboard that monitors a smart airport's IoT sensor network through a Bronze → Silver → Gold medallion pipeline — visualizing flight operations, passenger flow, cargo processing, environmental conditions, runway status, and security systems — with Claude AI providing grounded incident diagnosis and pipeline optimization recommendations.
 
-**Why:** Demonstrates end-to-end understanding of IoT ETL pipelines, KPI identification, data governance, observability, and AI-ready platform design — directly inspired by Miracle Software Systems' airport IoT case study (200+ destinations, sensor data lake, metadata lineage, real-time analytics).
+**Why:** Demonstrates end-to-end understanding of IoT ETL pipelines, KPI identification, data governance, observability, and AI-ready platform design — inspired by real-world airport IoT case studies (200+ destinations, sensor data lake, metadata lineage, real-time analytics).
 
-**For Whom:** Sanjeev Naidu Pappala (Director, Data Practice & Services at Miracle Software Systems) — evaluating: IoT ETL understanding, KPI identification, Streamlit visualization, Claude AI integration, and design mindset.
+**Target Audience:** Data engineering leaders evaluating: IoT ETL understanding, KPI identification, Streamlit visualization, Claude AI integration, and design mindset.
 
 **Core Narrative:** The dashboard tells one coherent story: **Detect → Diagnose → Assess → Recommend**
 1. Normal state: events flowing, pipeline healthy, KPIs green
@@ -76,14 +76,15 @@
 │      ┌────┴────────────────────────┘                                  │
 │      ▼                                                                │
 │  ┌────────────────────────────────────────────────────────┐           │
-│  │            STREAMLIT DASHBOARD (6 Pages)                │           │
+│  │            STREAMLIT DASHBOARD (7 Pages)                │           │
 │  │                                                         │           │
 │  │  🏠 Command Center — health, alerts, events             │           │
-│  │  ✈️ Flight & Passenger — OTP, throughput, flow          │           │
+│  │  👥 Passenger Analytics — OTP, throughput, flow         │           │
 │  │  🔧 Pipeline Health — ETL runs, durations, errors       │           │
 │  │  📈 KPI Metrics — quality, SLA, governance              │           │
 │  │  🔗 Data Lineage — B→S→G impact tracking                │           │
 │  │  🤖 AI Ops Center — Claude diagnosis & advice           │           │
+│  │  📊 AI Performance Monitor — LLM usage analytics        │           │
 │  └───────────────────────┬─────────────────────────────────┘           │
 │                          │                                            │
 │                          ▼                                            │
@@ -126,11 +127,12 @@ graph TD
 
     subgraph Dashboard["Streamlit Dashboard"]
         P1[🏠 Command Center]
-        P2[✈️ Flight & Passenger]
+        P2[👥 Passenger Analytics]
         P3[🔧 Pipeline Health]
         P4[📈 KPI Metrics]
         P5[🔗 Data Lineage]
         P6[🤖 AI Ops Center]
+        P7[📊 AI Performance Monitor]
     end
 
     AI[🧠 Claude AI Engine<br/>Grounded Diagnosis & Recommendations]
@@ -142,7 +144,7 @@ graph TD
     B --> SV
     SV --> G
     SV -.->|bad records| Q
-    G --> P1 & P2 & P3 & P4 & P5
+    G --> P1 & P2 & P3 & P4 & P5 & P7
     PLOG --> P3
     P6 --> AI
     G & PLOG & Q -.->|grounding context| AI
@@ -150,7 +152,7 @@ graph TD
 
 ### Architecture Walkthrough (Verbal)
 
-> "AeroOps AI is built as a three-layer medallion architecture simulating a smart airport IoT platform. Six IoT sensor streams — flights, passengers, cargo, environmental, runway, and security — feed into a Bronze layer as raw JSON events. A Silver transformation layer enforces schemas, applies quality validation rules per stream, and quarantines bad records. The Gold layer computes aggregated business KPIs: flight on-time performance, passenger throughput, security response times, and data quality scores. A Streamlit dashboard with six pages visualizes this end-to-end — from system health to AI-powered diagnosis. Claude AI provides grounded recommendations based on actual pipeline logs, KPI trends, and lineage context — not generic advice. The system includes injectable failure scenarios that demonstrate observability: schema drift, sensor outages, and traffic spikes propagate through the pipeline and the dashboard surfaces exactly what broke and what's impacted downstream."
+> "AeroOps AI is built as a three-layer medallion architecture simulating a smart airport IoT platform. Six IoT sensor streams — flights, passengers, cargo, environmental, runway, and security — feed into a Bronze layer as raw JSON events. A Silver transformation layer enforces schemas, applies quality validation rules per stream, and quarantines bad records. The Gold layer computes aggregated business KPIs: flight on-time performance, passenger throughput, security response times, and data quality scores. A Streamlit dashboard with seven pages visualizes this end-to-end — from system health to AI-powered diagnosis and LLM performance monitoring. Claude AI provides grounded recommendations based on actual pipeline logs, KPI trends, and lineage context — not generic advice. The system includes injectable failure scenarios that demonstrate observability: schema drift, sensor outages, and traffic spikes propagate through the pipeline and the dashboard surfaces exactly what broke and what's impacted downstream."
 
 ---
 
@@ -165,11 +167,11 @@ graph TD
 | **Data Simulation** | Python (Faker + custom generators) | Realistic IoT events with configurable chaos/failure injection |
 | **AI/ML** | Claude API (Anthropic SDK) | Workspace: "AeroOps"; grounded on pipeline data, not a generic chatbot |
 | **Deployment** | Streamlit Community Cloud | Free hosting, deploys from GitHub, zero infrastructure management |
-| **Version Control** | Git + GitHub | Personal account (varnikaprasad98@gmail.com) |
+| **Version Control** | Git + GitHub | varnika-98/AeroOps-POC |
 
 ### Why These Choices?
 
-**DuckDB over SQLite/PostgreSQL:** DuckDB is designed for analytical queries on columnar data (Parquet). It mirrors how real data lakehouses query data — SQL on files, not SQL on rows. When Sanjeev sees `SELECT * FROM read_parquet('data/gold/flight_kpis.parquet')`, he recognizes the pattern from Microsoft Fabric.
+**DuckDB over SQLite/PostgreSQL:** DuckDB is designed for analytical queries on columnar data (Parquet). It mirrors how real data lakehouses query data — SQL on files, not SQL on rows. `SELECT * FROM read_parquet('data/gold/flight_kpis.parquet')` is the same pattern used in Microsoft Fabric and Databricks.
 
 **Parquet over CSV/JSON:** Parquet is the standard storage format for medallion architectures in Fabric/Databricks/Synapse. Using Parquet shows awareness of real-world data engineering, not tutorial-level CSV manipulation.
 
@@ -678,7 +680,7 @@ class ClaudeClient:
 | Recent alerts | Scrollable feed with severity badges | Security + pipeline alerts |
 | Live airport stats | Big number cards (flights, passengers, bags) | Gold KPIs |
 
-**Page 2: ✈️ Flight & Passenger Analytics**
+**Page 2: 👥 Passenger Analytics**
 | Component | Chart Type | Data Source |
 |-----------|-----------|-------------|
 | Flight OTP | Gauge (0-100%) + hourly trend line | Gold flight KPIs |
@@ -729,6 +731,18 @@ class ClaudeClient:
 | Chat interface | `st.chat_message` / `st.chat_input` | Claude interactive |
 | Grounding context | Expandable "Show context sent to AI" | Context builder output |
 
+**Page 7: 📊 AI Performance Monitor**
+| Component | Chart Type | Data Source |
+|-----------|-----------|-------------|
+| Total Requests | Metric card | AI metrics JSON |
+| Avg Latency | Metric card with threshold coloring | AI metrics JSON |
+| Total Cost | Metric card (USD) | AI metrics JSON |
+| Error Rate | Metric card (%) | AI metrics JSON |
+| Latency by Prompt Type | Grouped bar chart | AI metrics JSON |
+| Token Usage (Input vs Output) | Grouped bar chart per prompt type | AI metrics JSON |
+| Cost Breakdown | Pie chart by prompt type | AI metrics JSON |
+| Request Timeline | Time series line chart | AI metrics JSON |
+
 ---
 
 ## 8. Failure Scenarios (Detailed)
@@ -774,15 +788,15 @@ class ClaudeClient:
 
 | Decision | Options Considered | Chosen | Rationale |
 |----------|-------------------|--------|-----------|
-| **Use case** | Room temperature monitoring, Manufacturing IoT, Smart Airport | Smart Airport | Miracle literally built an airport IoT data lake — shows company research and sophisticated thinking |
+| **Use case** | Room temperature monitoring, Manufacturing IoT, Smart Airport | Smart Airport | Airports have complex multi-stream IoT with compliance, governance, and lineage requirements — shows sophisticated thinking |
 | **Data streams** | 1-2 simple streams vs. 6 diverse streams | 6 streams | Shows multi-domain IoT complexity; each stream has unique schemas and quality rules |
 | **Storage format** | CSV, JSON, SQLite, Parquet | Parquet | Industry standard for medallion architectures (Fabric, Databricks, Synapse) |
-| **Query engine** | Pure Pandas vs. DuckDB | DuckDB + Pandas | DuckDB's SQL-on-Parquet mirrors real lakehouse patterns; Sanjeev recognizes this from Fabric |
-| **AI integration** | Generic chatbot vs. Grounded diagnosis | Grounded on pipeline data | Sanjeev explicitly values "grounded AI" — LLMs are "probability engines", context is the differentiator |
+| **Query engine** | Pure Pandas vs. DuckDB | DuckDB + Pandas | DuckDB's SQL-on-Parquet mirrors real lakehouse patterns (Microsoft Fabric, Databricks) |
+| **AI integration** | Generic chatbot vs. Grounded diagnosis | Grounded on pipeline data | Grounded AI with context is the differentiator — LLMs are "probability engines", context makes them reliable |
 | **Failure scenarios** | Static demo data vs. Injectable failures | Injectable with UI toggles | Demonstrates observability thinking — "systems that survive complexity win in production" |
 | **Deployment** | Docker, AWS, Streamlit Cloud | Streamlit Community Cloud | Free, zero-infra, deploys from GitHub — focus on the data engineering, not DevOps |
-| **Dashboard pages** | 1-2 pages vs. 6 specialized pages | 6 pages | Covers all evaluation criteria: operations, pipeline health, KPIs, governance, lineage, AI |
-| **Lineage** | Implicit (code-based) vs. Explicit (tracked) | Explicit lineage model | Sanjeev's airport case study mentions "reverse lineage from reporting to source" |
+| **Dashboard pages** | 1-2 pages vs. 7 specialized pages | 7 pages | Covers all evaluation criteria: operations, pipeline health, KPIs, governance, lineage, AI, performance |
+| **Lineage** | Implicit (code-based) vs. Explicit (tracked) | Explicit lineage model | Enables "reverse lineage from reporting to source" — critical for incident diagnosis |
 
 ---
 
@@ -793,7 +807,7 @@ class ClaudeClient:
 | **Simulating realistic airport data** | Custom generators with peak-hour patterns, weather correlation, and flight delay cascading | Data looks production-realistic, not random noise |
 | **Making AI recommendations grounded** | Context builder extracts structured summaries from pipeline logs, KPI trends, and validation failures before sending to Claude | Claude provides specific, actionable advice instead of generic LLM platitudes |
 | **Demonstrating governance without real compliance** | Implemented quality rules per stream, quarantine tracking, data classification labels, and lineage tracing | Shows governance understanding without needing actual regulatory systems |
-| **Schema drift detection in Silver layer** | Range validation rules catch when unit changes make values fall outside expected bounds | Mirrors Sanjeev's real Fabric Lakehouse issue (data in "undefined" folders) |
+| **Schema drift detection in Silver layer** | Range validation rules catch when unit changes make values fall outside expected bounds | Mirrors real Fabric Lakehouse issues (data in "undefined" folders, unit mismatches) |
 | **Keeping dashboard responsive with Parquet files** | DuckDB for analytical queries on Parquet (columnar pushdown) + Streamlit caching | Sub-second dashboard loads even with large datasets |
 | **6 streams × 3 layers = data volume** | Configurable simulation duration and event rates; aggressive Streamlit `@st.cache_data` decorators | Can demo with 1 hour of data or scale to 24 hours |
 
@@ -811,10 +825,10 @@ class ClaudeClient:
 > "No, and that distinction matters. A generic ChatGPT wrapper would hallucinate metrics and give vague advice. AeroOps AI uses a context builder that assembles a structured summary of current system state — pipeline run results, KPI values vs. thresholds, top validation failures, detected anomalies, and lineage impact paths. This context goes to Claude with a system prompt that enforces a specific analysis format: What changed? What broke? What's impacted downstream? What should the operator do? Claude can only reference data in the provided context, making its responses verifiable. I also show the grounding context in the UI, so the operator sees exactly what data Claude was given — transparency, not a black box. This is what makes AI enterprise-ready: not the model, but the architecture around it."
 
 **Q4: What is the Detect → Diagnose → Assess → Recommend narrative?**
-> "Most dashboards are passive — they show charts and leave interpretation to the user. AeroOps AI tells a story. Detect: the Command Center shows a red indicator on the runway stream. Diagnose: Pipeline Health reveals that Silver validation is quarantining 40% of runway records since 2 PM. Assess: Data Lineage shows that the Gold runway utilization and weather safety KPIs depend on this stream, so they're now unreliable. Recommend: AI Ops Center explains that wind speed values switched from kph to mph (likely a firmware update) and recommends a unit conversion rule. This mirrors a real scenario — Sanjeev's team faced data routing issues in their Fabric Lakehouse that broke downstream reporting. The POC shows I understand that pattern."
+> "Most dashboards are passive — they show charts and leave interpretation to the user. AeroOps AI tells a story. Detect: the Command Center shows a red indicator on the runway stream. Diagnose: Pipeline Health reveals that Silver validation is quarantining 40% of runway records since 2 PM. Assess: Data Lineage shows that the Gold runway utilization and weather safety KPIs depend on this stream, so they're now unreliable. Recommend: AI Ops Center explains that wind speed values switched from kph to mph (likely a firmware update) and recommends a unit conversion rule. This mirrors real scenarios where data routing issues in Fabric Lakehouses break downstream reporting. The POC shows understanding of that pattern."
 
 **Q5: Why did you choose the Smart Airport use case?**
-> "Three reasons. First, Miracle literally built an IoT sensor data lake for a major international airport — I studied their case study. Choosing the same domain shows I researched the company and can think in their problem space. Second, airports have 6+ distinct sensor types with different schemas, compliance requirements, and business KPIs — this is more complex than a single-stream IoT demo and demonstrates multi-domain thinking. Third, airports naturally require governance (FAA, security, PII) and lineage (trace any KPI back to its source sensor). These align exactly with what I saw in Sanjeev's posts about AI-ready platforms, data governance, and operational ownership."
+> "Three reasons. First, real companies have built IoT sensor data lakes for major international airports — choosing the same domain demonstrates research into industry use cases and the ability to think in that problem space. Second, airports have 6+ distinct sensor types with different schemas, compliance requirements, and business KPIs — this is more complex than a single-stream IoT demo and demonstrates multi-domain thinking. Third, airports naturally require governance (FAA, security, PII) and lineage (trace any KPI back to its source sensor). These align with what enterprise data leaders value: AI-ready platforms, data governance, and operational ownership."
 
 **Q6: How do the failure scenarios work?**
 > "There are three injectable scenarios, controlled by toggles in the dashboard sidebar. The first is Schema Drift: a runway sensor firmware update changes wind speed from kph to mph but keeps the same field name. Silver validation catches the out-of-range values and quarantines them — you see it in real time on the KPI page. The second is Sensor Outage: 3 of 8 passenger checkpoints go offline, and the dashboard shows event count dropping while throughput KPIs become unreliable. The third is Traffic Spike: 3x volume simulates a holiday weekend, overwhelming the Silver pipeline and breaching the Gold freshness SLA. Each scenario demonstrates a different observability concern: data quality drift, data completeness, and pipeline scalability."
@@ -823,7 +837,7 @@ class ClaudeClient:
 > "Four things. First, connect to a real streaming source — replace the simulator with Kafka or Azure Event Hubs for genuine real-time processing. Second, add Microsoft Fabric Lakehouse integration — write Bronze/Silver/Gold to Delta tables in Fabric instead of local Parquet, which would demonstrate enterprise-scale medallion architecture. Third, implement automated remediation — instead of Claude just recommending actions, have it trigger pipeline restarts or rule adjustments automatically (Agentic AI pattern). Fourth, add data contracts — formal schema agreements between producers and consumers, so schema drift is detected at the contract level, not just through validation failures."
 
 **Q8: How does this POC demonstrate an 'AI-Ready Platform'?**
-> "Sanjeev talks about AI-ready platforms being the differentiator — not the AI model itself, but the data ecosystem around it. AeroOps AI demonstrates this: the Claude AI engine is only as good as the data it's grounded on. Clean medallion layers mean Claude gets accurate context. Quality rules mean Claude can reference specific validation failures. Lineage tracking means Claude can trace impact paths. Pipeline logs mean Claude can pinpoint when and where things changed. Remove any of these layers, and Claude becomes just another hallucinating chatbot. The platform makes the AI reliable — that's the thesis."
+> "AI-ready platforms are the differentiator — not the AI model itself, but the data ecosystem around it. AeroOps AI demonstrates this: the Claude AI engine is only as good as the data it's grounded on. Clean medallion layers mean Claude gets accurate context. Quality rules mean Claude can reference specific validation failures. Lineage tracking means Claude can trace impact paths. Pipeline logs mean Claude can pinpoint when and where things changed. Remove any of these layers, and Claude becomes just another hallucinating chatbot. The platform makes the AI reliable — that's the thesis."
 
 ---
 
@@ -844,27 +858,28 @@ class ClaudeClient:
 ## 13. Project Structure
 
 ```
-MiraclesPOC/
+AeroOps-POC/
 ├── README.md                          # Project overview, setup, demo instructions
 ├── requirements.txt                   # Python dependencies
 ├── .env.example                       # ANTHROPIC_API_KEY placeholder
 ├── .gitignore                         # Ignore data/, .env, __pycache__
 │
 ├── app/
-│   ├── 🏠_Command_Center.py          # Main page: airport overview
+│   ├── Command_Center.py              # Main page: airport overview
 │   └── pages/
-│       ├── 1_✈️_Flight_Passenger.py  # Flight OTP + passenger flow
-│       ├── 2_🔧_Pipeline_Health.py    # ETL monitoring & logs
-│       ├── 3_📈_KPI_Metrics.py        # All KPI gauges & trends
-│       ├── 4_🔗_Data_Lineage.py       # Governance & lineage viz
-│       └── 5_🤖_AI_Ops_Center.py      # Claude diagnosis & chat
+│       ├── 1_Passenger_Analytics.py   # Passenger flow & checkpoint analytics
+│       ├── 2_Pipeline_Health.py       # ETL monitoring & logs
+│       ├── 3_KPI_Metrics.py           # All KPI gauges & trends
+│       ├── 4_Data_Lineage.py          # Governance & lineage viz
+│       ├── 5_AI_Ops_Center.py         # Claude diagnosis & chat
+│       └── 6_AI_Performance_Monitor.py # LLM usage analytics
 │
 ├── data/
 │   ├── bronze/                        # Raw JSON (6 stream subdirs)
 │   ├── silver/                        # Validated Parquet
 │   ├── gold/                          # Aggregated KPI Parquet
 │   ├── quarantine/                    # Failed validation records
-│   └── logs/                          # Pipeline execution logs
+│   └── logs/                          # Pipeline execution logs + AI metrics
 │
 ├── simulator/
 │   ├── airport_generator.py           # 6-stream IoT data generator
@@ -875,12 +890,12 @@ MiraclesPOC/
 ├── pipeline/
 │   ├── bronze_ingestion.py            # Raw → Bronze
 │   ├── silver_transformation.py       # Bronze → Silver + quarantine
-│   ├── gold_aggregation.py            # Silver → Gold KPIs
+│   ├── gold_aggregation.py            # Silver → Gold KPIs (DuckDB)
 │   ├── quality_rules.py              # Validation rules per stream
 │   └── orchestrator.py                # Full pipeline runner
 │
 ├── ai/
-│   ├── claude_client.py               # Anthropic SDK wrapper
+│   ├── claude_client.py               # Anthropic SDK wrapper + Ollama fallback
 │   ├── prompts.py                     # System prompts for grounded analysis
 │   └── context_builder.py             # Builds context from pipeline data
 │
@@ -890,13 +905,10 @@ MiraclesPOC/
 │   ├── lineage.py                     # Source → Bronze → Silver → Gold tracking
 │   └── theme.py                       # Streamlit theming, colors, layout
 │
-├── resources/
-│   └── NOTES_AND_NEXT_STEPS.md        # Original interview notes
-│
-└── docs/
-    ├── architecture.md                # Architecture docs + Mermaid diagrams
-    ├── kpi_definitions.md             # KPI definitions, formulas, thresholds
-    └── demo_script.md                 # Demo walkthrough for Sanjeev
+└── resources/
+    └── docs/
+        ├── architecture.md            # Architecture docs + Mermaid diagrams
+        └── user_manual.md             # User manual
 ```
 
 ---
@@ -905,10 +917,10 @@ MiraclesPOC/
 
 ### Streamlit Community Cloud
 
-1. Push code to GitHub (varnikaprasad98/MiraclesPOC)
+1. Push code to GitHub (varnika-98/AeroOps-POC)
 2. Connect Streamlit Community Cloud to the repo
 3. Configure secrets: `ANTHROPIC_API_KEY` in Streamlit's secrets management
-4. Set main file path: `app/🏠_Command_Center.py`
+4. Set main file path: `app/Command_Center.py`
 5. Deploy — accessible via public URL
 
 ### Local Development

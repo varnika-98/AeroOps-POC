@@ -48,6 +48,7 @@ IoT Sensor Network (6 Streams)
 | 📈 **KPI Metrics** | Data quality scores, schema validation, SLA compliance |
 | 🔗 **Data Lineage** | Bronze→Silver→Gold flow, impact analysis, governance |
 | 🤖 **AI Ops Center** | Claude Haiku 4.5 diagnosis with Ollama fallback, recommendations, chat |
+| 📊 **AI Performance Monitor** | LLM usage analytics: latency, token cost, error rates, prompt-type breakdown |
 
 ---
 
@@ -100,7 +101,7 @@ Injectable scenarios to demonstrate observability:
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Streamlit |
-| Visualizations | Plotly + Altair |
+| Visualizations | Plotly |
 | Data Processing | Pandas + DuckDB |
 | Storage | Parquet (Bronze/Silver/Gold) |
 | AI | Claude Haiku 4.5 (Anthropic SDK) + Ollama fallback |
@@ -119,14 +120,14 @@ AeroOps-POC/
 │       ├── 2_Pipeline_Health.py
 │       ├── 3_KPI_Metrics.py
 │       ├── 4_Data_Lineage.py
-│       └── 5_AI_Ops_Center.py
+│       ├── 5_AI_Ops_Center.py
+│       └── 6_AI_Performance_Monitor.py
 ├── simulator/              # IoT data & log generators
 ├── pipeline/               # Bronze → Silver → Gold ETL
 ├── ai/                     # Claude AI integration
 ├── utils/                  # Charts, KPI calc, lineage, theme
 ├── data/                   # Generated data (gitignored)
-├── resources/              # Reference documents
-└── docs/                   # Architecture & demo docs
+└── resources/              # Reference documents & architecture docs
 ```
 
 ---
