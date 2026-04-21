@@ -37,8 +37,8 @@ data/logs/
 .DS_Store
 Thumbs.db
 
-# Docs (internal reference only)
-docs/personal/
+# UI issue screenshots
+screenshots/
 
 # Streamlit
 .streamlit/secrets.toml

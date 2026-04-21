@@ -208,9 +208,11 @@ def get_ai_kpis() -> dict:
     for m in success:
         pt = m.get("prompt_type", "unknown")
         if pt not in prompt_types:
-            prompt_types[pt] = {"count": 0, "tokens": 0, "cost": 0.0, "latencies": []}
+            prompt_types[pt] = {"count": 0, "tokens": 0, "input_tokens": 0, "output_tokens": 0, "cost": 0.0, "latencies": []}
         prompt_types[pt]["count"] += 1
         prompt_types[pt]["tokens"] += (m.get("total_tokens", 0) or 0)
+        prompt_types[pt]["input_tokens"] += (m.get("input_tokens", 0) or 0)
+        prompt_types[pt]["output_tokens"] += (m.get("output_tokens", 0) or 0)
         prompt_types[pt]["cost"] += (m.get("cost_usd", 0) or 0)
         if "latency_sec" in m:
             prompt_types[pt]["latencies"].append(m["latency_sec"])
