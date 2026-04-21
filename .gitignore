@@ -43,3 +43,9 @@ screenshots/
 # Streamlit
 .streamlit/secrets.toml
 demo.py
+
+# Demo pages
+_demo_*.py
+
+# Copilot instructions (local only)
+.github/copilot-instructions.md
