@@ -15,6 +15,7 @@
 7. [KPI Metrics & Data Quality](#kpi-metrics--data-quality)
 8. [Data Lineage & Governance](#data-lineage--governance)
 9. [AI Ops Center](#ai-ops-center)
+10. [AI Performance Monitor](#ai-performance-monitor)
 
 ---
 
@@ -68,8 +69,8 @@ Three checkboxes that inject real-world data problems into the generated data. U
 
 | Checkbox | What It Does | Where You'll See the Impact |
 |----------|-------------|----------------------------|
-| **Runway Schema Drift** | Multiplies runway wind speed values by 1.6×, pushing them beyond the valid 0–200 kph range | KPI Metrics → quarantined runway records; Data Lineage → failing quality rules |
-| **Passenger Sensor Outage** | Drops all passenger events from 3 random checkpoints, simulating sensors going offline | Passenger Analytics → gaps in checkpoint data; KPI Metrics → lower passenger quality score |
+| **Runway Schema Drift** | Multiplies runway wind speed values by 4.0×, pushing them beyond the valid 0–200 kph range | KPI Metrics → quarantined runway records; Data Lineage → failing quality rules |
+| **Passenger Sensor Outage** | Corrupts passenger events from 3 random checkpoints by setting invalid wait_time (−1) and null checkpoint values, triggering validation failures | Passenger Analytics → gaps in checkpoint data; KPI Metrics → lower passenger quality score |
 | **Holiday Traffic Spike** | Generates 3× the normal event volume (~200K events instead of ~66K) | Pipeline Health → longer durations; Command Center → higher record counts |
 
 **Tip:** Toggle one or more, click Generate New Data, then explore the dashboard to see how the system reacts.
@@ -136,7 +137,7 @@ Each card shows:
 
 ### 🏅 Medallion Layer Health
 
-A **stacked bar chart** showing record counts at each pipeline layer (Bronze and Silver) per stream.
+A **grouped bar chart** showing record counts at each pipeline layer (Bronze and Silver) per stream.
 
 - **Bronze bars** — raw ingested records (before validation)
 - **Silver bars** — validated records that passed quality rules
@@ -269,7 +270,7 @@ Monitoring the ETL (Extract-Transform-Load) pipeline performance.
 
 ### 🗓️ Pipeline Run Timeline
 
-A **Gantt-style timeline chart** showing when each pipeline stage ran and how long it took.
+A **heatmap chart** showing pipeline run durations per stream across runs, using a blue gradient colorscale.
 
 - **Y-axis** — stream name (flights, passengers, etc.)
 - **X-axis** — time
@@ -280,7 +281,7 @@ A **Gantt-style timeline chart** showing when each pipeline stage ran and how lo
 
 ### 📈 Success / Failure Trend (Left)
 
-A **stacked bar chart** showing hourly counts of successful, failed, and partial pipeline runs.
+A **grouped bar chart** showing hourly counts of successful, failed, and partial pipeline runs.
 
 - **X-axis** — hour
 - **Y-axis** — count of runs
@@ -380,7 +381,7 @@ A **bar chart** showing how many records were quarantined (failed validation) pe
 
 A **bar chart** showing the count of each type of validation failure across all streams.
 
-- **Y-axis** — failure rule name (e.g., `delay_non_negative`, `temperature_range`)
+- **Y-axis** — readable failure label (e.g., "Negative Delay", "Temperature Out of Range")
 - **X-axis** — count of failures
 - Identifies which specific quality rules are being violated most
 
@@ -628,6 +629,39 @@ An expandable section (collapsed by default) showing exactly what data the AI re
 | **Raw JSON** | The exact JSON data structure passed to the AI |
 
 **Use case:** Transparency — verify what data the AI is basing its analysis on.
+
+---
+
+## AI Performance Monitor
+
+LLM usage analytics — latency, token consumption & cost tracking.
+
+> **Requires:** AI metrics data. Use the **AI Ops Center** page to run a diagnosis, get recommendations, or chat — metrics will appear here automatically.
+
+---
+
+### Overview KPI Cards
+
+Five metric cards showing:
+
+| Card | What It Shows |
+|------|-------------|
+| **Total Requests** | Number of AI calls made |
+| **Avg Latency** | Average response time (green < 5s, yellow < 10s, red ≥ 10s) |
+| **Total Tokens** | Combined input + output tokens consumed |
+| **Total Cost** | Estimated USD cost based on model pricing |
+| **Error Rate** | Percentage of failed AI requests |
+
+---
+
+### Sections
+
+| Section | Description |
+|---------|-------------|
+| **Latency Over Time** | Line chart of response times per AI call |
+| **Token Usage by Prompt Type** | Breakdown of input/output tokens by diagnose, recommend, chat |
+| **Cost Tracking** | Cumulative cost over time |
+| **Error Log** | Table of failed requests with error details |
 
 ---
 

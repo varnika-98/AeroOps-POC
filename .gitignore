@@ -25,6 +25,9 @@ data/gold/
 data/quarantine/
 data/logs/
 
+# Pytest
+.pytest_cache/
+
 # IDE
 .vscode/
 .idea/

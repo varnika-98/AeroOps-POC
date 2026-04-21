@@ -27,7 +27,7 @@ IoT Sensor Network (6 Streams)
  (Validated)
     │
     ▼
-  GOLD ──► Streamlit Dashboard (6 pages) ──► Claude AI
+  GOLD ──► Streamlit Dashboard (7 pages) ──► Claude AI
  (KPIs)
 ```
 
@@ -90,9 +90,21 @@ streamlit run app/Command_Center.py
 
 Injectable scenarios to demonstrate observability:
 
-1. **Runway Sensor Schema Drift** — Unit change (kph → mph) causes validation failures
+1. **Runway Sensor Schema Drift** — wind_speed_kph multiplied by 4.0×, exceeding 0–200 kph validation range
 2. **Passenger Sensor Outage** — 3 checkpoints go offline, KPIs underreport
 3. **Holiday Traffic Spike** — 3x volume overwhelms pipeline, SLA breach
+
+---
+
+## 🧪 Running Tests
+
+```bash
+# Run all unit tests
+pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ --cov=pipeline --cov=simulator --cov=utils --cov=ai --cov-report=term-missing
+```
 
 ---
 
@@ -126,6 +138,9 @@ AeroOps-POC/
 ├── pipeline/               # Bronze → Silver → Gold ETL
 ├── ai/                     # Claude AI integration
 ├── utils/                  # Charts, KPI calc, lineage, theme
+├── tests/                  # Unit tests (pytest)
+│   ├── conftest.py         # Shared fixtures & random seeding
+│   └── test_*.py           # 10 test modules (145 tests)
 ├── data/                   # Generated data (gitignored)
 └── resources/              # Reference documents & architecture docs
 ```
