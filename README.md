@@ -149,7 +149,7 @@ AeroOps-POC/
 
 ## 👩‍💻 Author
 
-**Varnika Prasad** — Data Engineer / AI Engineer
+**Varnika Prasad**
 
 ---
 
