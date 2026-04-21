@@ -224,7 +224,7 @@ graph TD
    │   Output: data/gold/*.parquet
    │   Computes:
    │     - flight_kpis.parquet (OTP, delay stats, gate utilization)
-   │     - passenger_kpis.parquet (throughput, wait times, checkpoint efficiency)
+   │     - passenger_kpis.parquet (throughput, wait times, avg wait minutes)
    │     - pipeline_kpis.parquet (success rate, latency, throughput)
    │     - quality_kpis.parquet (validation rates, quarantine %, freshness)
    │     - safety_kpis.parquet (response times, alert counts, resolution rates)
@@ -557,7 +557,7 @@ def aggregate_to_gold() -> dict:
 
     Produces:
         - flight_kpis.parquet: OTP, delay stats, gate utilization
-        - passenger_kpis.parquet: throughput, wait times, checkpoint efficiency
+        - passenger_kpis.parquet: throughput, wait times, avg wait minutes
         - pipeline_kpis.parquet: success rate, latency, throughput
         - quality_kpis.parquet: validation rates, quarantine %, freshness
         - safety_kpis.parquet: response times, alert counts
@@ -693,9 +693,9 @@ class ClaudeClient:
 **Page 3: 🔧 Pipeline Health & Logs**
 | Component | Chart Type | Data Source |
 |-----------|-----------|-------------|
-| Pipeline run timeline | Gantt chart per stream | Pipeline logs |
-| Success/failure trend | Stacked area chart | Pipeline logs |
-| Duration by stage | Grouped bar (Bronze→Silver, Silver→Gold) | Pipeline logs |
+| Pipeline run timeline | Heatmap (stream × run, blue gradient) | Pipeline logs |
+| Success/failure trend | Grouped bar chart | Pipeline logs |
+| Duration by stage | Horizontal bar (Silver stage per stream) | Pipeline logs |
 | Log viewer | Searchable table (filter by stream/severity/time) | Pipeline logs |
 | Duration regression | Line chart with trend detection | Pipeline logs |
 | Throughput per stream | Multi-line chart | Pipeline logs |
