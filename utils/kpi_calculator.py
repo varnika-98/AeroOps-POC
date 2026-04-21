@@ -184,6 +184,60 @@ def get_environmental_compliance() -> dict:
     return result if result else _NO_DATA.copy()
 
 
+def get_ai_kpis() -> dict:
+    """Returns AI/LLM usage KPIs from the metrics log."""
+    try:
+        from ai.claude_client import load_ai_metrics
+        metrics = load_ai_metrics()
+    except Exception:
+        metrics = []
+
+    if not metrics:
+        return _NO_DATA.copy()
+
+    success = [m for m in metrics if m.get("status") == "success"]
+    errors = [m for m in metrics if m.get("status") == "error"]
+
+    total_input = sum(m.get("input_tokens", 0) or 0 for m in success)
+    total_output = sum(m.get("output_tokens", 0) or 0 for m in success)
+    total_cost = sum(m.get("cost_usd", 0) or 0 for m in success)
+    latencies = [m["latency_sec"] for m in success if "latency_sec" in m]
+
+    # Per prompt type breakdown
+    prompt_types = {}
+    for m in success:
+        pt = m.get("prompt_type", "unknown")
+        if pt not in prompt_types:
+            prompt_types[pt] = {"count": 0, "tokens": 0, "input_tokens": 0, "output_tokens": 0, "cost": 0.0, "latencies": []}
+        prompt_types[pt]["count"] += 1
+        prompt_types[pt]["tokens"] += (m.get("total_tokens", 0) or 0)
+        prompt_types[pt]["input_tokens"] += (m.get("input_tokens", 0) or 0)
+        prompt_types[pt]["output_tokens"] += (m.get("output_tokens", 0) or 0)
+        prompt_types[pt]["cost"] += (m.get("cost_usd", 0) or 0)
+        if "latency_sec" in m:
+            prompt_types[pt]["latencies"].append(m["latency_sec"])
+
+    for pt in prompt_types.values():
+        lats = pt.pop("latencies")
+        pt["avg_latency_sec"] = round(sum(lats) / len(lats), 3) if lats else 0
+
+    return {
+        "total_requests": len(metrics),
+        "successful_requests": len(success),
+        "failed_requests": len(errors),
+        "error_rate_pct": round(len(errors) / len(metrics) * 100, 2) if metrics else 0,
+        "total_input_tokens": total_input,
+        "total_output_tokens": total_output,
+        "total_tokens": total_input + total_output,
+        "total_cost_usd": round(total_cost, 6),
+        "avg_latency_sec": round(sum(latencies) / len(latencies), 3) if latencies else 0,
+        "avg_tokens_per_request": round((total_input + total_output) / len(success)) if success else 0,
+        "by_prompt_type": prompt_types,
+        "model": success[-1].get("model", "N/A") if success else "N/A",
+        "backend": success[-1].get("backend", "N/A") if success else "N/A",
+    }
+
+
 def get_overall_system_health() -> dict:
     """Aggregates all KPI sources into a system health summary."""
     pipeline = get_pipeline_health()

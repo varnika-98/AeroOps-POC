@@ -267,21 +267,25 @@ st.divider()
 # ---------------------------------------------------------------------------
 st.markdown(section_header("Ask the AI Ops Assistant", "chat"), unsafe_allow_html=True)
 
-# Starter question buttons
-starter_cols = st.columns(3)
-starters = [
-    "What is the current system health?",
-    "Which streams have quality issues?",
-    "What KPIs are at risk?",
-]
-for col, question in zip(starter_cols, starters):
-    if col.button(question, key=f"starter_{question}"):
-        st.session_state.chat_messages.append({"role": "user", "content": question})
-
 # Render chat history
 for msg in st.session_state.chat_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+
+# Starter question buttons — right above chat input
+starter_cols = st.columns(6)
+starters = [
+    "What is the current system health?",
+    "Which streams have quality issues?",
+    "What KPIs are at risk?",
+    "Show recent pipeline failures",
+    "Any anomalies detected?",
+    "Summarize sensor status",
+]
+for col, question in zip(starter_cols, starters):
+    if col.button(question, key=f"starter_{question}"):
+        st.session_state.chat_messages.append({"role": "user", "content": question})
+        st.rerun()
 
 # Chat input
 if user_input := st.chat_input("Ask about system health, KPIs, incidents…"):
@@ -315,17 +319,37 @@ if (
         {"role": "assistant", "content": assistant_reply}
     )
 
-st.divider()
+# Context panel & New Conversation — only visible when chat has history
+if st.session_state.chat_messages:
+    ctx_col, clear_col = st.columns([6, 1])
+    with ctx_col:
+        with st.expander("Show Context Sent to AI", expanded=False):
+            if context:
+                tab_text, tab_json = st.tabs(["Formatted Text", "Raw JSON"])
+                with tab_text:
+                    st.code(format_context_for_prompt(context), language="text")
+                with tab_json:
+                    st.json(context)
+            else:
+                st.info("No context available — data may not have been generated yet.")
+    with clear_col:
+        if st.button("➕ New Conversation", key="clear_chat"):
+            st.session_state.chat_messages = []
+            st.rerun()
 
-# ---------------------------------------------------------------------------
-# 6. Grounding Context Panel
-# ---------------------------------------------------------------------------
-with st.expander("Show Context Sent to AI", expanded=False):
-    if context:
-        tab_text, tab_json = st.tabs(["Formatted Text", "Raw JSON"])
-        with tab_text:
-            st.code(format_context_for_prompt(context), language="text")
-        with tab_json:
-            st.json(context)
-    else:
-        st.info("No context available — data may not have been generated yet.")
+    # Vertical alignment fix + custom button styling
+    st.markdown("""
+    <style>
+        /* Align the New Conversation button with the expander */
+        [data-testid="stColumns"] > div:last-child .stButton {
+            margin-top: 0px;
+        }
+        [data-testid="stColumns"] > div:last-child .stButton button {
+            height: 44px;
+            white-space: nowrap;
+            border-radius: 8px;
+            border: 1px solid rgba(70,130,180,0.3);
+            font-size: 0.8rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)

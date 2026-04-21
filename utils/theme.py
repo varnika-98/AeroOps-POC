@@ -262,6 +262,28 @@ SVG_ICONS = {
         '<path d="M2.5 22v-6h6"/>'
         '<path d="M22 12a10 10 0 0 1-18.8 4.2L2.5 16"/></svg>'
     ),
+    "pulse": (
+        f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" stroke-linecap="round" '
+        f'stroke-linejoin="round" style="vertical-align:middle">'
+        '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'
+    ),
+    "trash": (
+        f'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="2" stroke-linecap="round" '
+        f'stroke-linejoin="round" style="vertical-align:middle">'
+        '<polyline points="3 6 5 6 21 6"/>'
+        '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4'
+        'a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+    ),
+    "add_circle": (
+        f'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{_N}" stroke-width="1.5" stroke-linecap="round" '
+        f'style="vertical-align:middle">'
+        '<circle cx="12" cy="12" r="10"/>'
+        '<line x1="12" y1="8" x2="12" y2="16"/>'
+        '<line x1="8" y1="12" x2="16" y2="12"/></svg>'
+    ),
 }
 
 # Small colored status SVGs (16×16, for inline use in markdown)
@@ -422,28 +444,48 @@ def apply_theme(st) -> None:
                 color: {COLORS["white"]};
                 margin: 0;
             }}
+            /* ── Chat input bottom container ── */
+            [data-testid="stBottom"] {{
+                background: linear-gradient(to bottom,
+                    rgba(232, 238, 244, 0) 0%,
+                    rgba(232, 238, 244, 1) 15%,
+                    rgba(232, 238, 244, 1) 100%) !important;
+                border: none !important;
+                box-shadow: none !important;
+            }}
+            [data-testid="stBottom"] > div {{
+                background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+            }}
+            /* Add padding so content doesn't hide behind fixed chat input */
+            [data-testid="stMain"] > div:first-child {{
+                padding-bottom: 100px !important;
+            }}
             /* ── Chat input ── */
+            [data-testid="stChatInput"],
+            [data-testid="stChatInput"] * {{
+                background-color: {COLORS["white"]} !important;
+            }}
             [data-testid="stChatInput"] {{
                 border-radius: 24px !important;
                 overflow: hidden;
-                position: relative !important;
-            }}
-            [data-testid="stChatInput"] > div {{
-                border-radius: 24px !important;
                 border: 2px solid #4682B4 !important;
-                background: {COLORS["white"]} !important;
                 box-shadow: 0 2px 8px rgba(70, 130, 180, 0.15) !important;
             }}
             [data-testid="stChatInput"] textarea,
             [data-testid="stChatInput"] input {{
                 color: {COLORS["dark_gray"]} !important;
-                background: transparent !important;
+                background-color: {COLORS["white"]} !important;
                 font-size: 0.95rem !important;
                 caret-color: {COLORS["navy"]} !important;
             }}
             [data-testid="stChatInput"] textarea::placeholder,
             [data-testid="stChatInput"] input::placeholder {{
                 color: #888 !important;
+            }}
+            [data-testid="stChatInput"] button {{
+                background-color: transparent !important;
             }}
             /* Chat message bubbles */
             [data-testid="stChatMessage"] {{
