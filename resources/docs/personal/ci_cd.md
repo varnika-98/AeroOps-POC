@@ -129,7 +129,7 @@ from pipeline.quality_rules import validate_record
 | Check | Method | Fails If |
 |-------|--------|----------|
 | .env gitignored | `grep "^\.env$" .gitignore` | .env not in .gitignore |
-| Pattern scan | grep across all source files | Finds: `sk-ant-api`, `sk-proj-`, `AKIA...`, `ghp_...`, `gho_...` |
+| Pattern scan | grep across all source files | Finds: Anthropic key prefixes, AWS key prefixes (`AKIA...`), GitHub token prefixes (`ghp_...`, `gho_...`) |
 
 **Scanned file types:** `*.py`, `*.yml`, `*.yaml`, `*.toml`, `*.json`, `*.md`
 
@@ -187,7 +187,7 @@ Developer workflow:
 
 ```toml
 # Configured in Streamlit Cloud dashboard → App settings → Secrets
-ANTHROPIC_API_KEY = "sk-ant-api..."
+ANTHROPIC_API_KEY = "your-anthropic-key-here"
 ```
 
 Accessible in app via `os.getenv("ANTHROPIC_API_KEY")` or `st.secrets["ANTHROPIC_API_KEY"]`.
