@@ -200,6 +200,34 @@ jobs:
           fi
           echo "OK: No secret patterns found"
 
+  unit-tests:
+    name: Unit Tests (pytest)
+    if: false  # Disabled — enable when ready
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        env:
+          ANTHROPIC_API_KEY: test-key-not-real
+        run: python -m pytest tests/ -v --tb=short
+
   dep-check:
     name: Dependency Check
     runs-on: ubuntu-latest
